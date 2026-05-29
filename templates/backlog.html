@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Backlog Orchestrator — Intel KMD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Nunito',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
+  background:#060c18;color:white;font-weight:700;min-height:100vh;
+}
+a{color:inherit;text-decoration:none}
+
+/* topbar */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(3,6,16,.97);backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.1);
+  height:48px;padding:0 20px;display:flex;align-items:center;gap:12px;
+}
+.topbar-title{font-size:.95rem;font-weight:900;flex:1}
+.topbar-title span{font-size:.6rem;font-weight:600;color:rgba(255,255,255,.5);margin-left:8px}
+.back-btn{color:white;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 11px;font-size:.7rem;font-weight:700}
+.back-btn:hover{background:rgba(255,255,255,.1)}
+.demo-pill{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#0071c5,#00897b);border-radius:20px;padding:5px 14px;font-size:.7rem;font-weight:900;animation:glow 2.5s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 12px rgba(0,113,197,.4)}50%{box-shadow:0 0 28px rgba(0,199,183,.7)}}
+
+/* controls strip — compact, fits above the fold */
+.controls{
+  padding:14px 20px 12px;
+  display:grid;
+  grid-template-columns:2fr 1.2fr 1.5fr auto;
+  gap:12px;
+  align-items:end;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  background:rgba(4,10,24,.7);
+}
+.ctrl-group{display:flex;flex-direction:column;gap:5px}
+.ctrl-label{font-size:.62rem;font-weight:900;letter-spacing:.5px;text-transform:uppercase;color:#00c7b7}
+input[type=text]{
+  width:100%;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);
+  border-radius:8px;color:white;font-family:inherit;font-size:.82rem;font-weight:600;
+  padding:9px 13px;transition:border-color .2s;outline:none;
+}
+input[type=text]:focus{border-color:#0071c5;background:rgba(0,113,197,.08)}
+textarea{
+  width:100%;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);
+  border-radius:8px;color:white;font-family:'Courier New',monospace;font-size:.75rem;font-weight:600;
+  padding:9px 13px;transition:border-color .2s;outline:none;resize:none;height:80px;line-height:1.55;
+}
+textarea:focus{border-color:#0071c5;background:rgba(0,113,197,.08)}
+.ctrl-hint{font-size:.58rem;color:rgba(255,255,255,.4);line-height:1.4}
+.ctrl-actions{display:flex;flex-direction:column;gap:8px;min-width:180px}
+.btn-run{
+  background:linear-gradient(135deg,#0071c5,#0050a0);color:white;
+  border:none;border-radius:22px;padding:11px 20px;font-family:inherit;
+  font-size:.85rem;font-weight:900;cursor:pointer;
+  box-shadow:0 4px 18px rgba(0,113,197,.45);transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-run:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 7px 24px rgba(0,113,197,.6)}
+.btn-run:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-push{
+  background:linear-gradient(135deg,#00897b,#00695c);color:white;
+  border:none;border-radius:22px;padding:9px 20px;font-family:inherit;
+  font-size:.78rem;font-weight:900;cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,137,123,.35);transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn-push:hover:not(:disabled){transform:translateY(-1px)}
+.btn-push:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.run-status{font-size:.6rem;color:rgba(255,255,255,.5);font-style:italic;text-align:center;min-height:.8rem;line-height:1.3}
+
+/* main content */
+.page{padding:16px 20px 40px;max-width:1400px;margin:0 auto}
+
+.alert{border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.78rem;display:flex;align-items:center;gap:9px}
+.alert-success{background:rgba(67,160,71,.15);border:1px solid rgba(67,160,71,.4);color:#a5d6a7}
+.alert-error{background:rgba(229,57,53,.15);border:1px solid rgba(229,57,53,.4);color:#ef9a9a}
+.alert-info{background:rgba(0,113,197,.15);border:1px solid rgba(0,113,197,.4);color:#90caf9}
+
+.stats-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.stat-card{background:rgba(8,18,40,.9);border:1px solid rgba(255,255,255,.11);border-radius:9px;padding:8px 14px;flex:1;min-width:80px}
+.stat-card .sl{font-size:.52rem;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:3px}
+.stat-card .sv{font-size:1.3rem;font-weight:900;line-height:1}
+
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tab{font-size:.7rem;font-weight:800;padding:5px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.17);cursor:pointer;transition:all .15s;color:rgba(255,255,255,.65)}
+.tab.active,.tab:hover{background:rgba(0,113,197,.25);border-color:#0071c5;color:white}
+
+/* ranked table */
+.table-wrap{background:rgba(6,14,32,.9);border:1px solid rgba(255,255,255,.11);border-radius:11px;overflow:hidden}
+.ranked-table{width:100%;border-collapse:collapse;font-size:.73rem}
+.ranked-table th{background:#060f20;color:white;padding:9px 11px;text-align:left;font-size:.59rem;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid rgba(255,255,255,.12)}
+.ranked-table td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.05)}
+.ranked-table tr:hover td{background:rgba(255,255,255,.04)}
+.rk{font-weight:900;color:rgba(255,255,255,.35);text-align:center;width:32px}
+.pbadge{font-size:.56rem;font-weight:900;padding:2px 7px;border-radius:7px;white-space:nowrap}
+.pbadge.p1{background:#c62828;color:white}.pbadge.p2{background:#e65100;color:white}
+.pbadge.p3{background:#2e7d32;color:white}.pbadge.p4{background:#424242;color:white}
+.dep-badge{font-size:.56rem;font-weight:800;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.09);white-space:nowrap}
+.effort-tag{font-size:.58rem;font-weight:800;padding:2px 7px;border-radius:7px}
+.effort-h{background:rgba(229,57,53,.22);color:#ef9a9a}
+.effort-m{background:rgba(245,124,0,.22);color:#ffb74d}
+.effort-l{background:rgba(67,160,71,.22);color:#a5d6a7}
+.status-tag{font-size:.55rem;font-weight:800;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07)}
+
+/* bucket grid */
+.bucket-wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.bucket{border-radius:11px;padding:14px;border:1.5px solid}
+.bucket.p1{background:rgba(229,57,53,.07);border-color:rgba(229,57,53,.3)}
+.bucket.p2{background:rgba(245,124,0,.07);border-color:rgba(245,124,0,.3)}
+.bucket.p3{background:rgba(67,160,71,.07);border-color:rgba(67,160,71,.3)}
+.bucket.p4{background:rgba(100,100,100,.06);border-color:rgba(150,150,150,.25)}
+.bucket-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.bucket-badge{font-size:.58rem;font-weight:900;padding:2px 9px;border-radius:9px}
+.bucket.p1 .bucket-badge{background:#c62828;color:white}.bucket.p2 .bucket-badge{background:#e65100;color:white}
+.bucket.p3 .bucket-badge{background:#2e7d32;color:white}.bucket.p4 .bucket-badge{background:#424242;color:white}
+.bucket-name{font-size:.8rem;font-weight:900;flex:1}.bucket-count{font-size:.6rem;color:rgba(255,255,255,.45)}
+.issue-card{background:rgba(255,255,255,.04);border-radius:7px;padding:8px 10px;margin-bottom:5px;border-left:2px solid rgba(255,255,255,.12)}
+.issue-card .ik{font-size:.63rem;font-weight:900;color:#90caf9;margin-bottom:3px}
+.issue-card .ik a{color:#90caf9}.issue-card .ik a:hover{text-decoration:underline}
+.issue-card .is{font-size:.69rem;line-height:1.4;margin-bottom:4px}
+.issue-card .imeta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.issue-card .mr{font-size:.52rem;color:rgba(255,255,255,.35);font-style:italic;margin-top:3px}
+
+/* spinner / empty */
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:80px 20px;color:rgba(255,255,255,.3);font-size:.88rem}
+.empty .ei{font-size:2.8rem;margin-bottom:14px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="back-btn">← Home</a>
+  <div class="topbar-title">🎯 Backlog Orchestrator <span>KMD · board 53970</span></div>
+  <a href="/hsd2jira-flow" class="demo-pill">🚀 HSD→Jira Flow</a>
+</div>
+
+<!-- compact controls strip — fits above the fold -->
+<div class="controls">
+  <div class="ctrl-group">
+    <div class="ctrl-label">Rapid Board URL</div>
+    <input type="text" id="boardUrl" value="{{ default_board_url }}">
+    <div class="ctrl-hint">Board ID extracted automatically from the URL.</div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Assignees <span style="text-transform:none;font-size:.56rem;letter-spacing:0;color:rgba(255,255,255,.4);font-weight:600">(optional — leave blank for all)</span></div>
+    <input type="text" id="assigneeFilter" placeholder="e.g. jsmith, adoe, mchen">
+    <div class="ctrl-hint">Comma-separated usernames · filters issues before ranking</div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Rule Overrides <span style="text-transform:none;font-size:.56rem;letter-spacing:0;color:rgba(255,255,255,.4);font-weight:600">(optional)</span></div>
+    <textarea id="rulesText">{{ default_rules }}</textarea>
+    <div class="ctrl-hint">Overrides Jira priority bucket · first match wins · ops: = != ~ !~</div>
+  </div>
+  <div class="ctrl-actions">
+    <button class="btn-run" id="runBtn" onclick="runOrchestrator()">
+      <span id="runIcon">⚡</span> Run
+    </button>
+    <button class="btn-push" id="pushBtn" onclick="pushToJira()" disabled>
+      ✓ Push to Jira
+    </button>
+    <button class="btn-push" id="resetBtn" onclick="resetToOriginal()" style="display:none;background:rgba(255,152,0,.18);border-color:rgba(255,152,0,.5);color:#ff9800">
+      ↩ Reset
+    </button>
+    <div class="run-status" id="runStatus"></div>
+  </div>
+</div>
+
+<div class="page">
+  <div id="alertBox"></div>
+
+  <div id="results" style="display:none">
+    <div class="stats-row" id="statsRow"></div>
+    <div class="tabs">
+      <div class="tab active" id="tabRanked" onclick="showTab('ranked')">📊 Ranked Order</div>
+      <div class="tab" id="tabBuckets" onclick="showTab('buckets')">🗂 Buckets</div>
+    </div>
+    <div id="panelRanked" class="table-wrap">
+      <table class="ranked-table">
+        <thead><tr>
+          <th class="rk">#</th><th>Key</th><th>Summary</th><th>Bucket</th>
+          <th>Dependency</th><th>Effort</th><th>Assignee</th><th>Status</th><th>Rule</th>
+        </tr></thead>
+        <tbody id="rankedBody"></tbody>
+      </table>
+    </div>
+    <div id="panelBuckets" class="bucket-wrap" style="display:none"></div>
+  </div>
+
+  <div class="empty" id="emptyState">
+    <div class="ei">🎯</div>
+    Hit <strong>Run</strong> to fetch the board and rank issues.
+    <div style="margin-top:18px;font-size:.75rem;color:rgba(255,255,255,.38);line-height:1.9;max-width:480px;margin-left:auto;margin-right:auto;text-align:left">
+      <div>📋 &nbsp;<strong style="color:rgba(255,255,255,.5)">Input</strong> — paste any Rapid Board URL; the board ID is extracted automatically</div>
+      <div>🪣 &nbsp;<strong style="color:rgba(255,255,255,.5)">Bucketing</strong> — issues are grouped by their Jira priority field: P1 → P2 → P3 → P4</div>
+      <div>↕️ &nbsp;<strong style="color:rgba(255,255,255,.5)">Sub-sort</strong> — within each bucket: blockers first, then no-dep (effort ↑), then external deps (effort ↑)</div>
+      <div>🚀 &nbsp;<strong style="color:rgba(255,255,255,.5)">Push</strong> — optionally write the ranked order back to Jira with one click</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let rankedKeys   = [];
+let originalKeys = [];
+
+function showTab(name) {
+  document.getElementById('panelRanked').style.display  = name==='ranked'  ? 'block' : 'none';
+  document.getElementById('panelBuckets').style.display = name==='buckets' ? 'grid'  : 'none';
+  document.getElementById('tabRanked').className  = 'tab' + (name==='ranked'  ? ' active' : '');
+  document.getElementById('tabBuckets').className = 'tab' + (name==='buckets' ? ' active' : '');
+}
+
+async function runOrchestrator() {
+  const boardUrl      = document.getElementById('boardUrl').value.trim();
+  const rulesText     = document.getElementById('rulesText').value.trim();
+  const assigneeFilter = document.getElementById('assigneeFilter').value.trim();
+  if (!boardUrl) { showAlert('Please enter a Rapid Board URL.', 'error'); return; }
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  document.getElementById('runIcon').innerHTML = '<span class="spinner"></span>';
+  document.getElementById('runStatus').textContent = 'Fetching board…';
+  document.getElementById('pushBtn').disabled = true;
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'block';
+  document.getElementById('alertBox').innerHTML = '';
+  try {
+    const resp = await fetch('/api/orchestrate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({board_url: boardUrl, rules_text: rulesText, assignees: assigneeFilter})
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Server error');
+    renderResults(data);
+    originalKeys = data.original_keys || [];
+    document.getElementById('runStatus').textContent =
+      `✓ ${data.fetched} fetched · ${data.total} ranked`;
+    document.getElementById('pushBtn').disabled = false;
+  } catch(e) {
+    showAlert('Error: ' + e.message, 'error');
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('runStatus').textContent = '';
+  } finally {
+    btn.disabled = false;
+    document.getElementById('runIcon').textContent = '⚡';
+  }
+}
+
+function renderResults(data) {
+  const {buckets, ranked} = data;
+  rankedKeys = ranked.map(i => i.key);
+  const totalH = ranked.reduce((s,i) => s + i.effort_h, 0);
+
+  document.getElementById('statsRow').innerHTML = [
+    stat('Fetched',     data.fetched,            'rgba(255,255,255,.45)'),
+    stat('Ranked',      data.total,              '#90caf9'),
+    stat('Effort',      totalH.toFixed(0)+'h',   '#ffb74d'),
+    stat('Weeks (40h)', (totalH/40).toFixed(1),  '#a5d6a7'),
+    stat('P1',          (buckets.P1||[]).length, '#ef5350'),
+    stat('P2',          (buckets.P2||[]).length, '#ff9800'),
+    stat('P3',          (buckets.P3||[]).length, '#66bb6a'),
+    stat('P4',          (buckets.P4||[]).length, '#90a4ae'),
+  ].join('');
+
+  document.getElementById('rankedBody').innerHTML = ranked.map((i,idx) => {
+    const ph = i.effort_h >= 80 ? 'effort-h' : i.effort_h >= 30 ? 'effort-m' : 'effort-l';
+    const b  = findBucket(buckets, i.key);
+    const rs = b==='P1' ? 'background:rgba(229,57,53,.06);' : '';
+    return `<tr style="${rs}">
+      <td class="rk">${idx+1}</td>
+      <td><a href="https://jira.devtools.intel.com/browse/${i.key}" target="_blank" style="color:#90caf9;font-weight:900">${i.key}</a></td>
+      <td style="max-width:300px">${i.summary}</td>
+      <td><span class="pbadge ${b.toLowerCase()}">${b}</span></td>
+      <td><span class="dep-badge">${i.dep_label||'—'}</span></td>
+      <td><span class="effort-tag ${ph}">${i.effort_h}h</span></td>
+      <td style="font-size:.65rem">${i.assignee}</td>
+      <td><span class="status-tag">${i.status}</span></td>
+      <td style="font-size:.57rem;color:rgba(255,255,255,.4);max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${i.matched_rule}</td>
+    </tr>`;
+  }).join('');
+
+  const bCfg = [
+    {key:'P1',label:'P1 · Showstopper',cls:'p1'},
+    {key:'P2',label:'P2 · Critical',   cls:'p2'},
+    {key:'P3',label:'P3 · Major',      cls:'p3'},
+    {key:'P4',label:'P4 · Minor',      cls:'p4'},
+  ];
+  document.getElementById('panelBuckets').innerHTML = bCfg.map(b => {
+    const items = buckets[b.key] || [];
+    const cards = items.map(i => issueCard(i)).join('') ||
+      '<div style="color:rgba(255,255,255,.3);font-size:.7rem;padding:6px 0">No issues</div>';
+    return `<div class="bucket ${b.cls}">
+      <div class="bucket-head">
+        <span class="bucket-badge">${b.key}</span>
+        <span class="bucket-name">${b.label}</span>
+        <span class="bucket-count">${items.length}</span>
+      </div>${cards}</div>`;
+  }).join('');
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+}
+
+function issueCard(i) {
+  const ph = i.effort_h >= 80 ? 'effort-h' : i.effort_h >= 30 ? 'effort-m' : 'effort-l';
+  return `<div class="issue-card">
+    <div class="ik"><a href="https://jira.devtools.intel.com/browse/${i.key}" target="_blank">${i.key}</a></div>
+    <div class="is">${i.summary}</div>
+    <div class="imeta">
+      <span class="effort-tag ${ph}">${i.effort_h}h</span>
+      <span class="dep-badge">${i.dep_label||'—'}</span>
+      <span class="status-tag">${i.status}</span>
+    </div>
+    <div class="mr">↳ ${i.matched_rule}</div>
+  </div>`;
+}
+
+function findBucket(buckets, key) {
+  for (const b of ['P1','P2','P3','P4'])
+    if ((buckets[b]||[]).find(x=>x.key===key)) return b;
+  return 'P4';
+}
+
+function stat(label, value, color) {
+  return `<div class="stat-card"><div class="sl">${label}</div><div class="sv" style="color:${color}">${value}</div></div>`;
+}
+
+async function pushToJira() {
+  if (!rankedKeys.length) return;
+  if (!confirm(`Push ${rankedKeys.length} issues to Jira in this ranked order? This rewrites the board backlog order.`)) return;
+  const btn = document.getElementById('pushBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Pushing…';
+  showAlert('Pushing ranked order to Jira…', 'info');
+  try {
+    const resp = await fetch('/api/rank', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({issueKeys: rankedKeys})
+    });
+    const data = await resp.json();
+    if (data.error) { showAlert(`❌ ${data.error}`, 'error'); return; }
+    const debugHint = data.debug && data.debug.length ? `\nDebug: ${data.debug[0]}` : '';
+  if (data.success) {
+      showAlert(`✅ Ranked ${data.success_count} issues in Jira! Check the Backlog tab (not Board tab) to see the new order.`, 'success');
+      document.getElementById('resetBtn').style.display = 'inline-flex';
+    }
+    else showAlert(`⚠ ${data.failed_count} failures, ${data.success_count} ok.\n${data.errors.slice(0,3).join('\n')}${debugHint}`, 'error');
+  } catch(e) {
+    showAlert('Push error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✓ Push to Jira';
+  }
+}
+
+async function resetToOriginal() {
+  if (!originalKeys.length) return;
+  if (!confirm(`Reset Jira backlog to the original order (${originalKeys.length} issues)?`)) return;
+  const btn = document.getElementById('resetBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Resetting…';
+  showAlert('Restoring original Jira order…', 'info');
+  try {
+    const resp = await fetch('/api/rank', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({issueKeys: originalKeys})
+    });
+    const data = await resp.json();
+    if (data.success) {
+      showAlert(`✅ Reset done — original order restored.`, 'success');
+      btn.style.display = 'none';
+    } else {
+      showAlert(`⚠ Reset had ${data.failed_count} errors.`, 'error');
+    }
+  } catch(e) {
+    showAlert('Reset error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↩ Reset';
+  }
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('alertBox');
+  el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+  if (type !== 'info') setTimeout(() => el.innerHTML = '', 6000);
+}
+</script>
+</body>
+</html>

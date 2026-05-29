@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CRI E2E Plan</title>
+  <style>
+    :root {
+      --intel-blue: #0068b5;
+      --intel-dark: #003c71;
+      --intel-mid:  #0096d6;
+      --intel-light:#e8f4fd;
+      --green:  #27ae60;
+      --orange: #e67e22;
+      --teal:   #00897b;
+      --purple: #7a1fa2;
+      --gray-bg:#f0f3f7;
+      --border: #d0dce8;
+      --text:   #1a2530;
+      --muted:  #6b7b8d;
+    }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{ font-family:'Segoe UI',Arial,sans-serif; background:var(--gray-bg); color:var(--text); font-size:11.5px; }
+
+    /* ── HEADER ── */
+    header{
+      background:linear-gradient(135deg,var(--intel-dark) 0%,var(--intel-blue) 60%,var(--intel-mid) 100%);
+      color:#fff; padding:10px 22px;
+      display:flex; align-items:center; justify-content:space-between;
+      box-shadow:0 2px 8px rgba(0,0,0,.3);
+    }
+    header .left h1{ font-size:1.1rem; letter-spacing:.5px; font-weight:700; }
+    header .left .sub{ font-size:.7rem; opacity:.8; margin-top:2px; }
+    header .right{ text-align:right; font-size:.7rem; opacity:.8; }
+    header .right a{ color:#7dcfff; text-decoration:none; font-weight:600; }
+    header .right a:hover{ text-decoration:underline; }
+
+    /* ── NAV TABS ── */
+    .nav-tabs{
+      display:flex; gap:0; background:var(--intel-dark);
+      border-bottom:3px solid var(--intel-blue);
+    }
+    .nav-tab{
+      padding:7px 18px; font-size:.75rem; font-weight:600; color:#a0c4e8;
+      cursor:pointer; border-right:1px solid rgba(255,255,255,.1);
+      transition:background .15s,color .15s;
+    }
+    .nav-tab:hover{ background:rgba(255,255,255,.08); color:#fff; }
+    .nav-tab.active{ background:var(--intel-blue); color:#fff; }
+
+    /* ── LEGEND BAR ── */
+    .legend-bar{
+      display:flex; gap:12px; flex-wrap:wrap;
+      padding:5px 18px; background:#fff; border-bottom:1px solid var(--border);
+      font-size:.67rem; color:var(--muted);
+    }
+    .legend-bar span{ display:flex; align-items:center; gap:3px; }
+
+    /* ── CONTAINER ── */
+    .container{ padding:10px 14px; }
+
+    /* ── PAGE TITLE ── */
+    .page-title{
+      display:flex; align-items:center; gap:10px;
+      margin-bottom:10px; padding:8px 14px;
+      background:linear-gradient(90deg,#e8f4fd,#fff);
+      border-left:4px solid var(--intel-blue);
+      border-radius:0 5px 5px 0;
+    }
+    .page-title h2{ font-size:.95rem; color:var(--intel-dark); font-weight:700; }
+    .page-title .tag{ font-size:.65rem; background:var(--intel-blue); color:#fff; padding:2px 8px; border-radius:10px; font-weight:700; }
+
+    /* ── MAIN GRID (side by side) ── */
+    .main-grid{ display:grid; grid-template-columns: 3fr 1.1fr; gap:10px; align-items:start; }
+
+    /* ── SECTION CARD ── */
+    .section-card{ background:#fff; border-radius:6px; box-shadow:0 1px 5px rgba(0,0,0,.1); overflow:hidden; }
+    .section-header{
+      display:flex; align-items:center; gap:7px;
+      padding:6px 12px; border-bottom:2px solid var(--intel-blue);
+    }
+    .section-header.teal  { border-color:var(--teal); }
+    .section-header.purple{ border-color:var(--purple); }
+
+    .sh-badge{ display:inline-block; padding:2px 8px; border-radius:10px; font-size:.63rem; font-weight:700; color:#fff; white-space:nowrap; }
+    .sh-title{ font-size:.8rem; font-weight:700; color:var(--intel-dark); }
+    .sh-count{ margin-left:auto; font-size:.67rem; color:var(--muted); }
+
+    /* ── TABLE ── */
+    .table-wrap{ overflow-x:auto; }
+    table{ width:100%; border-collapse:collapse; font-size:10.5px; }
+    thead tr{ background:var(--intel-light); }
+    th{ padding:5px 7px; text-align:left; font-weight:700; color:var(--intel-dark); border-bottom:2px solid var(--border); white-space:nowrap; font-size:10.5px; }
+    td{ padding:4px 7px; border-bottom:1px solid #eaecf0; vertical-align:top; }
+    tbody tr:hover{ background:#f4f9ff; }
+    tbody tr:last-child td{ border-bottom:none; }
+
+    /* row type stripe by data-section */
+    tr[data-section="sw_only"]{ border-left:3px solid var(--intel-blue); }
+    tr[data-section="hw+sw"]  { border-left:3px solid var(--orange); }
+    tr[data-section="gt_dcn"] { border-left:3px solid var(--teal); }
+
+    /* ── JIRA CHIPS ── */
+    .jira-chip{
+      display:inline-block; padding:1px 5px; border-radius:7px;
+      font-size:.6rem; font-weight:700; text-decoration:none;
+      margin:1px 1px 1px 0; transition:opacity .15s; white-space:nowrap;
+    }
+    .jira-chip:hover{ opacity:.78; }
+    .chip-vlk  { background:#e3f0fb; color:#0057a0; border:1px solid #9bc8ef; }
+    .chip-xpum { background:#eaf8ee; color:#1a7a40; border:1px solid #90d4a8; }
+    .chip-neo  { background:#fff4e6; color:#b85c00; border:1px solid #f5c589; }
+    .chip-guc  { background:#f3e8ff; color:#7a1fa2; border:1px solid #d4a5f5; }
+    .chip-other{ background:#f0f0f0; color:#444;    border:1px solid #ccc; }
+    .no-jira   { color:var(--muted); font-style:italic; font-size:.6rem; }
+    .type-badge{ display:inline-block; padding:1px 5px; border-radius:6px; font-size:.58rem; font-weight:700; white-space:nowrap; }
+    .type-sw  { background:#daeeff; color:#005a9e; }
+    .type-hw  { background:#fde8d0; color:#a04000; }
+    .type-gt  { background:#d0f0ec; color:#00695c; }
+
+    /* ── HSD LINK ── */
+    .hsd-link{ font-weight:600; color:var(--intel-blue); text-decoration:none; white-space:nowrap; font-size:10.5px; }
+    .hsd-link:hover{ text-decoration:underline; }
+
+    /* ── TITLE CELL ── */
+    .title-cell{ max-width:200px; line-height:1.3; font-size:10.5px; color:#2a3540; }
+
+    /* ── EDITABLE PCELL ── */
+    .pcell{
+      min-width:36px; min-height:16px; padding:2px 4px; border-radius:3px;
+      border:1px solid transparent; transition:border-color .15s,background .15s;
+      cursor:text; outline:none; font-size:10.5px; display:inline-block; width:100%;
+    }
+    .pcell:hover { border-color:#b0cce8; background:#f0f7ff; }
+    .pcell:focus { border-color:var(--intel-blue); background:#fff; box-shadow:0 0 0 2px rgba(0,104,181,.12); }
+    .pcell.saving{ border-color:#f5c589; }
+    .pcell.saved { border-color:#90d4a8; }
+
+    /* ── STATUS BADGE ── */
+    .status-badge{
+      display:inline-block; padding:1px 6px; border-radius:7px;
+      font-size:.6rem; font-weight:600; white-space:nowrap;
+    }
+    .status-blocked  { background:#fde8d0; color:#c0392b; border:1px solid #e8a88a; }
+    .status-progress { background:#e8f4fd; color:#0057a0; border:1px solid #9bc8ef; }
+    .status-done     { background:#d4edda; color:#155724; border:1px solid #b1dfbb; }
+    .status-other    { background:#f5f5f5; color:#555;    border:1px solid #ddd; }
+
+    /* ── SECTION DIVIDER ROWS ── */
+    .divider-row td{
+      background:linear-gradient(90deg,rgba(0,104,181,.08),transparent);
+      font-size:.65rem; font-weight:700; color:var(--intel-dark);
+      padding:3px 8px; border-bottom:1px solid #c0d8ee;
+    }
+
+    footer{ text-align:center; padding:10px; color:var(--muted); font-size:.65rem; margin-top:4px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="left">
+    <h1>🧭 CRI E2E Plan</h1>
+    <div class="sub">Crescent Island · End-to-End Issue Tracker · All components</div>
+  </div>
+  <div class="right">
+    Updated: <strong id="ts"></strong><br>
+    <a href="/">← Home</a>
+  </div>
+</header>
+
+<div class="nav-tabs">
+  <div class="nav-tab active">📋 E2E Plan</div>
+</div>
+
+<div class="legend-bar">
+  <span><span style="display:inline-block;width:10px;height:10px;background:var(--intel-blue);border-radius:2px"></span> SW Only</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:var(--orange);border-radius:2px"></span> HW+SW</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:var(--teal);border-radius:2px"></span> GT DCN</span>
+  <span><span class="jira-chip chip-vlk">VLK</span> KMD</span>
+  <span><span class="jira-chip chip-xpum">XPUM</span> xpuM</span>
+  <span><span class="jira-chip chip-neo">NEO</span> NEO/Sysman</span>
+  <span><span class="jira-chip chip-guc">GUC</span> GuC</span>
+  <span>✏️ Click BMG / Comments cells to edit — auto-saves</span>
+</div>
+
+<div class="container">
+
+  <div class="page-title">
+    <h2>CRI Issues — Full E2E Tracking</h2>
+    <span class="tag">{{ cri_rows|length }} issues</span>
+    <span class="tag" style="background:var(--purple)">{{ xpum_rows|length }} XPUM/Sysman tasks</span>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- ══ LEFT: CRI Issues ══ -->
+    <div class="section-card">
+      <div class="section-header">
+        <span class="sh-badge" style="background:var(--intel-blue)">📌 CRI ISSUES</span>
+        <span class="sh-title">SW Only + HW+SW Updates + GT DCN</span>
+        <span class="sh-count">{{ cri_rows|length }} rows</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:8px"></th>
+              <th style="width:96px">HSD ID</th>
+              <th>Title</th>
+              <th style="width:160px">JIRA(s)</th>
+              <th style="width:78px">Supported BMG ✏️</th>
+              <th style="width:120px">Comments ✏️</th>
+            </tr>
+          </thead>
+          <tbody>
+            {%- set ns = namespace(last_section='') -%}
+            {% for row in cri_rows %}
+              {%- if row.section != ns.last_section -%}
+                {%- set ns.last_section = row.section -%}
+                <tr class="divider-row">
+                  <td colspan="6">
+                    {% if row.section == 'sw_only' %}🔵 SW Only Updates
+                    {% elif row.section == 'hw+sw' %}🟠 HW + SW Updates
+                    {% else %}🟢 GT DCN{% endif %}
+                  </td>
+                </tr>
+              {%- endif -%}
+            <tr data-section="{{ row.section }}">
+              <td style="padding:0;width:4px"></td>
+              <td><a class="hsd-link" href="{{ row.hsd_link }}" target="_blank" rel="noopener">{{ row.hsd_id }}</a></td>
+              <td class="title-cell">{{ row.title }}</td>
+              <td>
+                {% if row.chips %}
+                  {% for c in row.chips %}
+                    <a class="jira-chip {{ c.cls }}" href="{{ c.link }}" target="_blank" rel="noopener">{{ c.id }}</a>
+                  {% endfor %}
+                {% else %}
+                  <span class="no-jira">—</span>
+                {% endif %}
+              </td>
+              <td><div class="pcell" data-key="{{ row.key_bmg }}" contenteditable="true">{{ row.bmg }}</div></td>
+              <td><div class="pcell" data-key="{{ row.key_cmt }}" contenteditable="true" style="min-height:28px;white-space:pre-wrap">{{ row.comment }}</div></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: XPUM / Sysman ══ -->
+    <div class="section-card">
+      <div class="section-header purple">
+        <span class="sh-badge" style="background:var(--purple)">⚙ XPUM / SYSMAN</span>
+        <span class="sh-count">{{ xpum_rows|length }}</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:70px">Section</th>
+              <th>Feature</th>
+              <th style="width:100px">JIRA</th>
+              <th style="width:70px">Status</th>
+              <th style="width:90px">Dependency</th>
+              <th style="width:72px">Blocker ETA</th>
+              <th style="width:52px">ETA</th>
+              <th style="width:110px">Remarks</th>
+              <th style="width:64px">BMG ✏️</th>
+              <th style="width:90px">Comments ✏️</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in xpum_rows %}
+            <tr>
+              <td><span style="font-size:0.72em;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px">{{ row.section }}</span></td>
+              <td class="title-cell" style="max-width:120px">{{ row.feature }}</td>
+              <td>
+                {% for chip in row.chips %}
+                  <a class="jira-chip {{ chip.cls }}" href="{{ chip.link }}" target="_blank" rel="noopener">{{ chip.id }}</a>
+                {% else %}
+                  <span class="no-jira">—</span>
+                {% endfor %}
+              </td>
+              <td>
+                {% set sl = row.status.lower() %}
+                {% if 'blocked' in sl %}
+                  <span class="status-badge status-blocked">Blocked</span>
+                {% elif 'progress' in sl or 'wip' in sl %}
+                  <span class="status-badge status-progress">WIP</span>
+                {% elif 'done' in sl or 'complet' in sl %}
+                  <span class="status-badge status-done">Done</span>
+                {% elif 'review' in sl %}
+                  <span class="status-badge status-progress">Review</span>
+                {% elif row.status and row.status.lower() not in ('na','n/a','ready','') %}
+                  <span class="status-badge status-other" title="{{ row.status }}">{{ row.status[:12] }}</span>
+                {% else %}
+                  <span class="no-jira">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% for chip in row.dep_chips %}
+                  <a class="jira-chip {{ chip.cls }}" href="{{ chip.link }}" target="_blank" rel="noopener">{{ chip.id }}</a>
+                {% else %}
+                  {% if row.dep_raw and row.dep_raw.lower() not in ('na','n/a','ready','') %}
+                    <span style="font-size:0.78em;color:#aaa" title="{{ row.dep_raw }}">{{ row.dep_raw[:16] }}{% if row.dep_raw|length > 16 %}…{% endif %}</span>
+                  {% else %}<span class="no-jira">—</span>{% endif %}
+                {% endfor %}
+              </td>
+              <td style="font-size:0.78em;color:{% if row.blocker_eta and row.blocker_eta.lower() not in ('na','n/a','') %}#e07b39{% else %}#666{% endif %}">
+                {{ row.blocker_eta if row.blocker_eta and row.blocker_eta.lower() not in ('na','n/a','') else '—' }}
+              </td>
+              <td style="font-size:0.8em;font-weight:600;color:{% if 'Q1' in row.overall_eta %}#4caf50{% elif 'Q2' in row.overall_eta %}#ff9800{% elif 'Q3' in row.overall_eta or 'Q4' in row.overall_eta %}#f44336{% else %}#888{% endif %}">
+                {{ row.overall_eta if row.overall_eta and row.overall_eta.lower() not in ('na','n/a','') else '—' }}
+              </td>
+              <td class="title-cell" style="font-size:0.78em;color:#aab;max-width:110px" title="{{ row.remarks }}">
+                {{ row.remarks[:60] }}{% if row.remarks|length > 60 %}…{% endif %}
+              </td>
+              <td><div class="pcell" data-key="{{ row.key_bmg }}" contenteditable="true">{{ row.bmg }}</div></td>
+              <td><div class="pcell" data-key="{{ row.key_cmt }}" contenteditable="true" style="min-height:28px;white-space:pre-wrap">{{ row.comment }}</div></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /main-grid -->
+</div><!-- /container -->
+
+<footer>CRI E2E Plan · Intel Confidential · Crescent Island Program</footer>
+
+<script>
+  document.getElementById('ts').textContent = new Date().toLocaleString();
+
+  document.querySelectorAll('.pcell').forEach(cell => {
+    cell.addEventListener('blur', () => {
+      const key   = cell.dataset.key;
+      const value = cell.innerText.trim();
+      cell.classList.add('saving');
+      fetch('/cri-e2e/save', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({key, value})
+      })
+      .then(r => r.json())
+      .then(() => {
+        cell.classList.remove('saving');
+        cell.classList.add('saved');
+        setTimeout(() => cell.classList.remove('saved'), 1200);
+      })
+      .catch(() => cell.classList.remove('saving'));
+    });
+    cell.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); cell.blur(); }
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JGS Bug Triage Dashboard — Intel</title>
+    <style>
+        /* ── Reset & base ─────────────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Intel Clear', -apple-system, BlinkMacSystemFont,
+                         'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0071c5 0%, #003c71 50%, #001e3c 100%);
+            min-height: 100vh;
+            padding: 12px;
+        }
+
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image: repeating-linear-gradient(
+                45deg, transparent, transparent 35px,
+                rgba(255,255,255,.025) 35px, rgba(255,255,255,.025) 70px);
+            pointer-events: none; z-index: 0;
+        }
+
+        .page { max-width: 1600px; margin: 0 auto; position: relative; z-index: 1; }
+
+        /* ── Header ──────────────────────────────────────────────────────── */
+        .header {
+            background: rgba(255,255,255,.98);
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,.3);
+            border-left: 4px solid #0071c5;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .header-left { flex: 1; min-width: 200px; }
+
+        .intel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+
+        .intel-logo-text { font-size: .9rem; font-weight: 700; color: #0071c5; letter-spacing: -1px; }
+
+        .intel-badge {
+            background: #0071c5; color: white;
+            padding: 1px 6px; border-radius: 8px;
+            font-size: .5rem; font-weight: 600; letter-spacing: .5px;
+        }
+
+        .header h1 { font-size: 1.05rem; color: #003c71; font-weight: 700; }
+        .header p  { font-size: .68rem; color: #666; margin-top: 1px; }
+
+        .header-stats {
+            display: flex; gap: 10px; flex-wrap: wrap;
+        }
+
+        .stat-pill {
+            background: #f5f8ff;
+            border: 1px solid #d0e4f7;
+            border-radius: 20px;
+            padding: 6px 14px;
+            text-align: center;
+        }
+        .stat-pill .num  { font-size: 1.3rem; font-weight: 700; color: #0071c5; display: block; }
+        .stat-pill .lbl  { font-size: .58rem; color: #666; white-space: nowrap; }
+
+        .stat-pill.warn .num { color: #e65100; }
+        .stat-pill.warn { border-color: #ffcc80; background: #fff8f0; }
+        .stat-pill.open-pill .num { color: #2e7d32; }
+        .stat-pill.open-pill { border-color: #a5d6a7; background: #f1f8e9; }
+        .stat-pill.closed-pill .num { color: #546e7a; }
+        .stat-pill.closed-pill { border-color: #cfd8dc; background: #eceff1; }
+
+        .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 7px 14px; border-radius: 6px; border: none;
+            font-size: .72rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; text-decoration: none;
+        }
+        .btn-primary { background: #0071c5; color: white; }
+        .btn-primary:hover { background: #005fa3; }
+        .btn-outline {
+            background: white; color: #0071c5;
+            border: 1px solid #0071c5;
+        }
+        .btn-outline:hover { background: #e8f2fb; }
+
+        .last-updated { font-size: .62rem; color: #888; white-space: nowrap; }
+
+        /* ── Section cards ───────────────────────────────────────────────── */
+        .section {
+            background: rgba(255,255,255,.98);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,.2);
+            overflow: hidden;
+        }
+
+        .section-header {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 16px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .section-header:hover { filter: brightness(.96); }
+
+        .section-icon { font-size: 1.1rem; }
+        .section-title { font-size: .88rem; font-weight: 700; color: white; flex: 1; }
+        .section-count {
+            background: rgba(255,255,255,.25);
+            color: white; border-radius: 12px;
+            padding: 2px 9px; font-size: .7rem; font-weight: 700;
+        }
+        .section-toggle { color: white; font-size: .8rem; transition: transform .2s; }
+        .section.collapsed .section-toggle { transform: rotate(-90deg); }
+        .section.collapsed .section-body   { display: none; }
+
+        /* Section colour themes */
+        .sec-critical  .section-header { background: linear-gradient(135deg, #b71c1c, #c62828); }
+        .sec-p1        .section-header { background: linear-gradient(135deg, #e65100, #ef6c00); }
+        .sec-p2        .section-header { background: linear-gradient(135deg, #1565c0, #1976d2); }
+        .sec-p3        .section-header { background: linear-gradient(135deg, #2e7d32, #388e3c); }
+        .sec-other     .section-header { background: linear-gradient(135deg, #4a148c, #6a1b9a); }
+        .sec-closed    .section-header { background: linear-gradient(135deg, #37474f, #546e7a); }
+        .sec-rejected  .section-header { background: linear-gradient(135deg, #880e4f, #ad1457); }
+        /* Open/Closed state toggle */
+        .status-filter-bar {
+            background: rgba(255,255,255,.98);
+            border-radius: 8px;
+            padding: 8px 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .sfbtn {
+            padding: 5px 16px; border-radius: 14px;
+            border: 1.5px solid #d0dff0;
+            background: #f5f8ff; color: #003c71;
+            font-size: .72rem; font-weight: 700;
+            cursor: pointer; transition: all .15s;
+        }
+        .sfbtn.active { background: #0071c5; color: white; border-color: #0071c5; }
+        .sfbtn.closed-btn.active { background: #546e7a; border-color: #546e7a; }
+
+        /* ── Table ───────────────────────────────────────────────────────── */
+        .table-wrap { overflow-x: auto; }
+
+        table {
+            width: 100%; border-collapse: collapse;
+            font-size: .72rem;
+        }
+        thead tr {
+            background: #f0f4fa;
+            border-bottom: 2px solid #d0dff0;
+        }
+        th {
+            padding: 8px 10px;
+            text-align: left;
+            font-weight: 700;
+            color: #003c71;
+            white-space: nowrap;
+        }
+        tbody tr:nth-child(even) { background: #fafcff; }
+        tbody tr:hover           { background: #edf4fc; }
+
+        td { padding: 8px 10px; vertical-align: top; border-bottom: 1px solid #e8eef8; }
+
+        /* age highlight */
+        .age-warn  { color: #b71c1c; font-weight: 700; }
+        .age-ok    { color: #2e7d32; }
+
+        /* status badges */
+        .badge {
+            display: inline-block;
+            padding: 1px 7px; border-radius: 10px;
+            font-size: .62rem; font-weight: 600; white-space: nowrap;
+        }
+        .badge-open     { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+        .badge-fixed    { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .badge-wip      { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+        .badge-new      { background: #fce4ec; color: #c62828; border: 1px solid #f48fb1; }
+        .badge-default  { background: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8; }
+        .badge-critical { background: #ffebee; color: #b71c1c; border: 1px solid #ef9a9a; }
+
+        /* priority badges */
+        .pri-1 { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+        .pri-2 { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+        .pri-3 { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+        .pri-4 { background: #f1f8e9; color: #558b2f; border: 1px solid #c5e1a5; }
+
+        /* ── Bug ID link ─────────────────────────────────────────────────── */
+        a.hsd-link {
+            color: #0071c5; font-weight: 700; text-decoration: none; white-space: nowrap;
+        }
+        a.hsd-link:hover { text-decoration: underline; }
+
+        /* ── Title cell ──────────────────────────────────────────────────── */
+        .title-cell    { max-width: 320px; }
+        .title-text    { font-weight: 600; color: #1a1a2e; display: block; margin-bottom: 2px; }
+        .owner-text    { font-size: .62rem; color: #888; }
+
+        /* ── Component badges ────────────────────────────────────────────── */
+        .comp-badge {
+            display: inline-block;
+            padding: 1px 6px; border-radius: 8px;
+            font-size: .58rem; font-weight: 600; margin: 1px 2px 1px 0;
+            white-space: nowrap;
+            /* default/fallback for unmapped components */
+            background: #f5f5f5; color: #555; border: 1px solid #ccc;
+        }
+        .comp-XeSim      { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+        .comp-KMD        { background: #f9fbe7; color: #558b2f; border: 1px solid #c5e1a5; }
+        .comp-IGC        { background: #fce4ec; color: #c62828; border: 1px solid #f48fb1; }
+        .comp-PISA       { background: #fff8e1; color: #e65100; border: 1px solid #ffe082; }
+        .comp-Test       { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .comp-ComputeDev { background: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8; }
+        .comp-ValTeam    { background: #e0f7fa; color: #00838f; border: 1px solid #80deea; }
+        .comp-Coral      { background: #fdf0e8; color: #bf5e00; border: 1px solid #f7c797; }
+        .comp-Other      { background: #f5f5f5; color: #555;    border: 1px solid #ccc; }
+
+        /* ── Component trail ─────────────────────────────────────────────── */
+        .comp-trail    { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+        .comp-arrow    { color: #bbb; font-size: .6rem; flex-shrink: 0; }
+        .comp-badge.comp-prev { opacity: 0.42; }
+
+        .comment-date  { font-size: .62rem; color: #555; white-space: nowrap; margin-bottom: 3px; }
+        .comment-author { font-size: .6rem; color: #888; margin-bottom: 2px; }
+        .cell-text  {
+            color: #444; font-size: .68rem; line-height: 1.45;
+            display: -webkit-box; -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .cell-text.expanded { -webkit-line-clamp: unset; overflow: visible; }
+        .expand-btn {
+            background: none; border: none; color: #0071c5;
+            font-size: .62rem; cursor: pointer; padding: 0; margin-top: 2px;
+        }
+
+        /* Editable P1 cells */
+        .editable-cell {
+            min-height: 20px; padding: 3px 6px;
+            border: 1px dashed #c5d8f0; border-radius: 4px;
+            font-size: .68rem; color: #333; outline: none;
+            background: #fafcff; min-width: 100px; line-height: 1.4;
+        }
+        .editable-cell:empty::before { content: attr(placeholder); color: #bbb; font-style: italic; }
+        .editable-cell:focus { border-color: #0071c5; background: #e8f2ff; border-style: solid; }
+
+        /* ── Action button ───────────────────────────────────────────────── */
+        .btn-escalate {
+            background: #b71c1c; color: white;
+            border: none; border-radius: 5px;
+            padding: 4px 9px; font-size: .64rem; font-weight: 600;
+            cursor: pointer; white-space: nowrap;
+            transition: background .2s;
+        }
+        .btn-escalate:hover    { background: #7f0000; }
+        .btn-escalate:disabled { background: #999; cursor: default; }
+        .btn-escalate.sent     { background: #2e7d32; }
+
+        /* ── Empty state ─────────────────────────────────────────────────── */
+        .empty { padding: 20px; text-align: center; color: #999; font-size: .78rem; }
+
+        /* ── Toast ───────────────────────────────────────────────────────── */
+        #toast {
+            position: fixed; bottom: 20px; right: 20px;
+            background: #323232; color: white;
+            padding: 10px 18px; border-radius: 6px;
+            font-size: .75rem; opacity: 0; transition: opacity .35s;
+            z-index: 9999; pointer-events: none;
+        }
+        #toast.show { opacity: 1; }
+
+        /* ── Critical row highlight ──────────────────────────────────────── */
+        .critical-row { background: #fff5f5 !important; }
+        .critical-row:hover { background: #ffe8e8 !important; }
+
+        /* ── Loading overlay ──────────────────────────────────────────────── */
+        #spinner-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,60,113,.6);
+            z-index: 9998; align-items: center; justify-content: center;
+        }
+        #spinner-overlay.visible { display: flex; }
+        .spinner {
+            width: 42px; height: 42px; border-radius: 50%;
+            border: 4px solid rgba(255,255,255,.3);
+            border-top-color: white;
+            animation: spin .8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Component filter bar ─────────────────────────────────────────── */
+        .filter-bar {
+            background: rgba(255,255,255,.98);
+            border-radius: 8px;
+            padding: 10px 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,.2);
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .filter-bar-label {
+            font-size: .72rem; font-weight: 700;
+            color: #003c71; white-space: nowrap; margin-right: 4px;
+        }
+        .filter-btn {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 11px; border-radius: 14px;
+            border: 1.5px solid #d0dff0;
+            background: #f5f8ff; color: #003c71;
+            font-size: .68rem; font-weight: 600;
+            cursor: pointer; transition: all .15s; white-space: nowrap;
+        }
+        .filter-btn:hover { border-color: #0071c5; background: #e8f2fb; }
+        .filter-btn.active { background: #0071c5; color: white; border-color: #0071c5; }
+        .filter-btn .filter-count {
+            background: rgba(0,113,197,.12); color: #0071c5;
+            border-radius: 8px; padding: 0 5px; font-size: .6rem;
+        }
+        .filter-btn.active .filter-count { background: rgba(255,255,255,.25); color: white; }
+        .filter-clear {
+            margin-left: auto; font-size: .65rem; color: #0071c5;
+            background: none; border: none; cursor: pointer;
+            text-decoration: underline; white-space: nowrap;
+        }
+        .filter-clear:hover { color: #003c71; }
+        .section.all-hidden { display: none; }
+
+        /* ── Responsive ──────────────────────────────────────────────────── */
+        @media (max-width: 900px) {
+            th.hide-sm, td.hide-sm { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <!-- ── Header ─────────────────────────────────────────────────────────── -->
+    <div class="header">
+        <div class="header-left">
+            <div class="intel-row">
+                <span class="intel-logo-text">Intel®</span>
+                <span class="intel-badge">INTERNAL</span>
+            </div>
+            <h1>🐛 JGS Bug Triage Dashboard</h1>
+            <p>
+                Live view of all JGS bugs from HSD query
+                &nbsp;·&nbsp; JGS Critical flagged first &nbsp;·&nbsp; SW Arch auto-loop at {{ escalate_weeks }}&nbsp;wks
+            </p>
+        </div>
+
+        <div class="header-stats">
+            <div class="stat-pill">
+                <span class="num">{{ total_bugs }}</span>
+                <span class="lbl">Total Bugs</span>
+            </div>
+            <div class="stat-pill open-pill">
+                <span class="num">{{ open_count }}</span>
+                <span class="lbl">Open</span>
+            </div>
+            <div class="stat-pill closed-pill">
+                <span class="num">{{ closed_count }}</span>
+                <span class="lbl">Closed</span>
+            </div>
+            <div class="stat-pill">
+                <span class="num">{{ jgs_critical|length }}</span>
+                <span class="lbl">JGS Critical</span>
+            </div>
+            <div class="stat-pill">
+                <span class="num">{{ p1_bugs|length }}</span>
+                <span class="lbl">P1 Showstoppers</span>
+            </div>
+            <div class="stat-pill warn">
+                <span class="num">{{ needs_arch_count }}</span>
+                <span class="lbl">Needs Arch Escalation</span>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <a href="https://hsdes.intel.com/appstore/generalapps/#/pages/community/1206341217?queryId=14026739770&articleId=13012962854"
+               target="_blank" class="btn btn-outline">🔗 Open in HSD</a>
+            <button class="btn btn-primary" onclick="refreshData()">↻ Refresh</button>
+            <span class="last-updated">Last updated: {{ last_updated }}</span>
+        </div>
+    </div>
+
+
+    <!-- ── Bug table macro ───────────────────────────────────────────────── -->
+    {% macro bug_table(bugs, section_id, show_p1_extras=false, show_closed_date=false) %}
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th style="width:100px">Bug ID</th>
+                <th style="min-width:180px">Title</th>
+                <th style="width:90px">Filed</th>
+                {% if show_closed_date %}<th style="width:90px">Closed</th>{% endif %}
+                <th style="width:55px">Age&nbsp;(wks)</th>
+                <th style="width:85px">Status</th>
+                <th style="width:115px">Priority</th>
+                <th style="min-width:150px" class="hide-sm">Component</th>
+                <th style="width:90px">Owner</th>
+                <th class="hide-sm" style="min-width:200px">Last Comment</th>
+                <th style="width:100px">Action</th>
+                {% if show_p1_extras %}
+                <th style="min-width:130px">DCNs Affected</th>
+                <th style="min-width:160px">Comments</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for bug in bugs %}
+        <tr class="{{ 'critical-row' if bug.is_jgs_critical }}"
+            data-comps="{{ bug.comp_trail | join(',') }}">
+            <td>
+                <a class="hsd-link" href="{{ bug.hsd_url }}" target="_blank">{{ bug.id }}</a>
+                {% if bug.comment_count %}
+                <div style="font-size:.58rem;color:#999;margin-top:1px">💬 {{ bug.comment_count }}</div>
+                {% endif %}
+            </td>
+            <td class="title-cell">
+                <span class="title-text">{{ bug.title or '—' }}</span>
+            </td>
+            <td style="white-space:nowrap;font-size:.68rem;color:#555">{{ bug.filed_date }}</td>
+            {% if show_closed_date %}<td style="white-space:nowrap;font-size:.68rem;color:#2e7d32;font-weight:600">{{ bug.closed_date or '—' }}</td>{% endif %}
+            <td>
+                <span class="{{ 'age-warn' if bug.age_weeks >= escalate_weeks else 'age-ok' }}">
+                    {{ bug.age_weeks }}
+                </span>
+            </td>
+            <td>
+                {% set s = bug.status.lower() %}
+                {% if 'fix' in s or 'resolv' in s or 'clos' in s or 'verif' in s %}
+                    <span class="badge badge-fixed">{{ bug.status }}</span>
+                {% elif 'progress' in s or 'assign' in s or 'active' in s %}
+                    <span class="badge badge-wip">{{ bug.status }}</span>
+                {% elif 'new' in s or 'open' in s %}
+                    <span class="badge badge-new">{{ bug.status }}</span>
+                {% else %}
+                    <span class="badge badge-default">{{ bug.status or 'Unknown' }}</span>
+                {% endif %}
+            </td>
+            <td>
+                <span class="badge pri-{{ bug.priority_rank }}">{{ bug.priority_label }}</span>
+            </td>
+            <td class="hide-sm">
+                {% if bug.comp_trail|length == 1 %}
+                <span class="comp-badge comp-{{ bug.comp_trail[0]|replace(' ','') }}">{{ bug.comp_trail[0] }}</span>
+                {% else %}
+                <span class="comp-trail">
+                    {% for c in bug.comp_trail %}
+                    <span class="comp-badge comp-{{ c|replace(' ','') }}{{ ' comp-prev' if not loop.last }}">{{ c }}</span>
+                    {% if not loop.last %}<span class="comp-arrow">→</span>{% endif %}
+                    {% endfor %}
+                </span>
+                {% endif %}
+            </td>
+            <td style="font-size:.7rem;color:#333;white-space:nowrap">{{ bug.owner or '—' }}</td>
+            <td class="comment-cell hide-sm">
+                {% if bug.last_comment_date %}
+                <div class="comment-date">🕐 {{ bug.last_comment_date }}</div>
+                {% endif %}
+                {% if bug.last_comment_author %}
+                <div class="comment-author">by {{ bug.last_comment_author }}</div>
+                {% endif %}
+                {% if bug.last_comment_text %}
+                <div class="cell-text" id="cmt-{{ section_id }}-{{ bug.id }}">{{ bug.last_comment_text }}</div>
+                <button class="expand-btn" onclick="toggleExpand('cmt-{{ section_id }}-{{ bug.id }}', this)">Show more</button>
+                {% else %}
+                <span style="color:#ccc;font-size:.65rem">No comments yet</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if bug.needs_arch %}
+                <button
+                    class="btn-escalate"
+                    id="esc-{{ bug.id }}"
+                    onclick="escalate('{{ bug.id }}', '{{ bug.title|replace("'","&#39;")|truncate(80, True) }}', {{ bug.age_weeks }})"
+                >📧 Notify Arch</button>
+                {% else %}
+                <span style="color:#ccc;font-size:.62rem">—</span>
+                {% endif %}
+            </td>
+            {% if show_p1_extras %}
+            <td><div class="editable-cell" contenteditable="true" data-key="dcn-{{ bug.id }}" onblur="saveEditable(this)" placeholder="—"></div></td>
+            <td><div class="editable-cell" contenteditable="true" data-key="note-{{ bug.id }}" onblur="saveEditable(this)" placeholder="—"></div></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endmacro %}
+
+    <!-- ── Section wrapper macro ──────────────────────────────────────────── -->
+    {% macro bug_section(section_id, icon, title, bugs, theme, show_p1_extras=false, show_closed_date=false) %}
+    {% if bugs %}
+    <div class="section {{ theme }}" id="sec-{{ section_id }}">
+        <div class="section-header" onclick="toggleSection('sec-{{ section_id }}')">
+            <span class="section-icon">{{ icon }}</span>
+            <span class="section-title">{{ title }}</span>
+            <span class="section-count">{{ bugs|length }} bug{{ 's' if bugs|length != 1 }}</span>
+            <span class="section-toggle">▼</span>
+        </div>
+        <div class="section-body">
+            {{ bug_table(bugs, section_id, show_p1_extras=show_p1_extras, show_closed_date=show_closed_date) }}
+        </div>
+    </div>
+    {% endif %}
+    {% endmacro %}
+
+    <!-- ── Component filter bar ──────────────────────────────────────────── -->
+    <div class="filter-bar" id="filter-bar">
+        <span class="filter-bar-label">🔍 Filter by component:</span>
+        <button class="filter-clear" id="filter-clear" onclick="clearFilter()" style="display:none">✕ Clear filter</button>
+    </div>
+
+    <!-- ── Open / Closed state filter ───────────────────────────────────── -->
+    <div class="status-filter-bar">
+        <span class="filter-bar-label">📂 Show:</span>
+        <button class="sfbtn active" id="sfbtn-all"   onclick="setStatusFilter('all')">All</button>
+        <button class="sfbtn"        id="sfbtn-open"  onclick="setStatusFilter('open')">Open&nbsp;<span style="font-size:.6rem;opacity:.7">({{ open_count }})</span></button>
+        <button class="sfbtn closed-btn" id="sfbtn-closed" onclick="setStatusFilter('closed')">Closed&nbsp;<span style="font-size:.6rem;opacity:.7">({{ closed_count }})</span></button>
+    </div>
+
+    <!-- ① JGS Critical ──────────────────────────────────────────────────── -->
+    {{ bug_section('critical', '🚨', 'JGS Critical', jgs_critical, 'sec-critical') }}
+
+    <!-- ② P1 Showstoppers ───────────────────────────────────────────────── -->
+    {{ bug_section('p1', '🔴', 'P1 – Showstoppers', p1_bugs, 'sec-p1', show_p1_extras=true) }}
+
+    <!-- ③ P2 High ───────────────────────────────────────────────────────── -->
+    {{ bug_section('p2', '🟠', 'P2 – High', p2_bugs, 'sec-p2') }}
+
+    <!-- ④ P3 Medium ─────────────────────────────────────────────────────── -->
+    {{ bug_section('p3', '🟡', 'P3 – Medium', p3_bugs, 'sec-p3') }}
+
+    <!-- ⑤ Others ────────────────────────────────────────────────────────── -->
+    {{ bug_section('other', '⚪', 'Other / Low Priority', other_bugs, 'sec-other') }}
+
+    <!-- ⑥ Completed ─────────────────────────────────────────────────────── -->
+    {{ bug_section('completed', '✅', 'Completed', completed_bugs, 'sec-closed', show_closed_date=true) }}
+
+    <!-- ⑦ Rejected ──────────────────────────────────────────────────────── -->
+    {{ bug_section('rejected', '🚫', 'Rejected', rejected_bugs, 'sec-rejected', show_closed_date=true) }}
+
+    <!-- Empty state ─────────────────────────────────────────────────────── -->
+    {% if total_bugs == 0 %}
+    <div class="section">
+        <div class="empty" style="padding:30px;line-height:1.8">
+            <div style="font-size:2rem;margin-bottom:8px">🔑</div>
+            <strong>No bugs loaded.</strong><br>
+            Most likely cause: <strong>Kerberos ticket expired</strong> on the server.<br>
+            SSH to the server and run:<br>
+            <code style="background:#f0f4fa;padding:3px 8px;border-radius:4px;font-size:.8rem">
+                kinit vwattal@AMR.CORP.INTEL.COM
+            </code><br>
+            Then click <strong>↻ Refresh</strong> above.
+            &nbsp;·&nbsp;
+            <a href="/jgs-bug-triage/debug" target="_blank" style="color:#0071c5">View debug info</a>
+        </div>
+    </div>
+    {% endif %}
+
+</div><!-- /.page -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Spinner -->
+<div id="spinner-overlay"><div class="spinner"></div></div>
+
+<script>
+/* ── Component filter ──────────────────────────────────────────────────── */
+(function buildFilterBar() {
+    const counts = {};
+    document.querySelectorAll('tr[data-comps]').forEach(row => {
+        const comps = row.dataset.comps.split(',').map(s => s.trim()).filter(Boolean);
+        const current = comps[comps.length - 1];
+        if (current) counts[current] = (counts[current] || 0) + 1;
+    });
+    if (!Object.keys(counts).length) return;
+
+    const bar   = document.getElementById('filter-bar');
+    const clear = document.getElementById('filter-clear');
+    const order = ['XeSim','KMD','IGC','PISA','Test','Compute Dev','Val Team','Coral','Other'];
+    const sorted = Object.keys(counts).sort((a, b) => {
+        const ai = order.indexOf(a), bi = order.indexOf(b);
+        if (ai === -1 && bi === -1) return a.localeCompare(b);
+        return ai === -1 ? 1 : bi === -1 ? -1 : ai - bi;
+    });
+
+    sorted.forEach(comp => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-btn';
+        btn.dataset.comp = comp;
+        btn.innerHTML = `${comp} <span class="filter-count">${counts[comp]}</span>`;
+        btn.addEventListener('click', () => applyFilter(comp));
+        bar.insertBefore(btn, clear);
+    });
+})();
+
+let _activeFilter  = null;
+let _statusFilter  = 'all'; // 'all' | 'open' | 'closed'
+
+/* Open/Closed sections ids */
+const CLOSED_SECTIONS = ['sec-completed', 'sec-rejected'];
+const OPEN_SECTIONS   = ['sec-critical','sec-p1','sec-p2','sec-p3','sec-other'];
+
+function setStatusFilter(mode) {
+    _statusFilter = mode;
+    ['all','open','closed'].forEach(m => {
+        const b = document.getElementById('sfbtn-' + m);
+        if (b) b.classList.toggle('active', m === mode);
+    });
+    _applyVisibility();
+}
+
+function applyFilter(comp) {
+    if (_activeFilter === comp) { clearFilter(); return; }
+    _activeFilter = comp;
+    document.querySelectorAll('.filter-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.comp === comp));
+    document.getElementById('filter-clear').style.display = '';
+    _applyVisibility();
+}
+
+function clearFilter() {
+    _activeFilter = null;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('filter-clear').style.display = 'none';
+    _applyVisibility();
+}
+
+function _applyVisibility() {
+    document.querySelectorAll('.section').forEach(sec => {
+        const secId = sec.id;
+        const isClosedSec = CLOSED_SECTIONS.includes(secId);
+        const isOpenSec   = OPEN_SECTIONS.includes(secId);
+
+        // Status filter: hide whole section if it's in the wrong group
+        if (_statusFilter === 'open'   && isClosedSec) { sec.classList.add('all-hidden'); return; }
+        if (_statusFilter === 'closed' && isOpenSec)   { sec.classList.add('all-hidden'); return; }
+
+        const rows = sec.querySelectorAll('tr[data-comps]');
+        if (!rows.length) { sec.classList.remove('all-hidden'); return; }
+
+        let visible = 0;
+        rows.forEach(row => {
+            const comps = row.dataset.comps.split(',').map(s => s.trim());
+            const match = !_activeFilter || comps[comps.length - 1] === _activeFilter;
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        sec.classList.toggle('all-hidden', visible === 0);
+    });
+}
+/* ── Editable P1 cells (localStorage) ──────────────────────────────── */
+function saveEditable(el) {
+    const key = el.dataset.key;
+    if (key) localStorage.setItem('p1_edit_' + key, el.innerText.trim());
+}
+
+(function restoreEditables() {
+    document.querySelectorAll('.editable-cell[data-key]').forEach(el => {
+        const val = localStorage.getItem('p1_edit_' + el.dataset.key);
+        if (val) el.innerText = val;
+    });
+})();
+/* ── Section collapse ──────────────────────────────────────────────────── */
+function toggleSection(id) {
+    const sec = document.getElementById(id);
+    if (sec) sec.classList.toggle('collapsed');
+}
+
+/* ── Expand / collapse cell text ───────────────────────────────────────── */
+function toggleExpand(elId, btn) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (el.classList.contains('expanded')) {
+        el.classList.remove('expanded');
+        btn.textContent = 'Show more';
+    } else {
+        el.classList.add('expanded');
+        btn.textContent = 'Show less';
+    }
+}
+
+/* ── Toast helper ──────────────────────────────────────────────────────── */
+function showToast(msg, duration) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration || 3500);
+}
+
+/* ── Spinner ───────────────────────────────────────────────────────────── */
+function setSpinner(on) {
+    document.getElementById('spinner-overlay').classList.toggle('visible', on);
+}
+
+/* ── Refresh ───────────────────────────────────────────────────────────── */
+function refreshData() {
+    setSpinner(true);
+    fetch('/jgs-bug-triage/refresh', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            setSpinner(false);
+            showToast(`✅ Refreshed — ${data.count} bugs loaded. Reloading…`);
+            setTimeout(() => location.reload(), 1200);
+        })
+        .catch(err => {
+            setSpinner(false);
+            showToast('❌ Refresh failed: ' + err, 4000);
+        });
+}
+
+/* ── Escalate ──────────────────────────────────────────────────────────── */
+function escalate(bugId, bugTitle, ageDays) {
+    const btn = document.getElementById('esc-' + bugId);
+    if (!btn || btn.disabled) return;
+
+    if (!confirm(
+        `Send escalation email to SW Architecture team for\nHSD ${bugId}?\n\n` +
+        `"${bugTitle}"\n(${ageDays} wks open)`
+    )) return;
+
+    btn.disabled    = true;
+    btn.textContent = '⏳ Sending…';
+
+    fetch('/jgs-bug-triage/send-arch-email', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ bug_id: bugId, bug_title: bugTitle, age_weeks: ageDays }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'sent') {
+            btn.textContent = '✅ Email Sent';
+            btn.classList.add('sent');
+            showToast(`📧 Escalation email sent for HSD ${bugId}`);
+        } else {
+            btn.disabled    = false;
+            btn.textContent = '📧 Notify Arch';
+            showToast('❌ Email failed: ' + (data.error || 'unknown error'), 5000);
+        }
+    })
+    .catch(err => {
+        btn.disabled    = false;
+        btn.textContent = '📧 Notify Arch';
+        showToast('❌ Network error: ' + err, 5000);
+    });
+}
+</script>
+</body>
+</html>

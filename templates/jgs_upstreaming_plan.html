@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>JGS Upstreaming Plan</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI",Arial,sans-serif;background:#f4f6f9;color:#222;font-size:15px}
+header{background:#1a237e;color:#fff;padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:17px;font-weight:600}
+header a{color:rgba(255,255,255,.75);font-size:12px;text-decoration:none}
+header a:hover{color:#fff}
+.badge-active{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:12px;font-size:11px;margin-left:12px}
+
+.section{margin:16px 28px}
+.section-title{font-size:16px;font-weight:600;color:#1a237e;margin-bottom:10px;
+  border-left:4px solid #3949ab;padding-left:9px;display:flex;align-items:center;gap:8px}
+.section-sub{font-size:13px;font-weight:400;color:#777;background:#e8eaf6;padding:2px 8px;border-radius:10px}
+
+/* ── Graph card ── */
+.graph-card{background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:16px;overflow:hidden}
+.graph-wrap{position:relative;height:250px}
+
+/* ── Refresh bar ── */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.btn{padding:6px 16px;border:none;border-radius:5px;font-size:13px;cursor:pointer;font-weight:500}
+.btn-refresh{background:#3949ab;color:#fff}
+.btn-refresh:hover{background:#1a237e}
+
+/* ── Main table ── */
+.tbl-wrap{overflow-x:auto;max-height:65vh;overflow-y:auto}
+table.main{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;
+  box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;font-size:13px;table-layout:fixed}
+table.main thead tr{background:#1a237e;color:#fff}
+table.main th{padding:8px 10px;text-align:left;font-weight:500;white-space:nowrap;position:sticky;top:0;z-index:2}
+table.main td{padding:5px 10px;border-bottom:1px solid #f0f0f8;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.main tr:last-child td{border-bottom:none}
+table.main tr:hover td{background:#f5f5ff}
+.col-key{width:90px}
+.col-title{width:33%}
+.col-asgn{width:130px}
+.col-comp{width:120px}
+.col-ww{width:80px}
+.col-time{width:80px}
+.col-status{width:110px}
+.col-comment{width:170px}
+
+/* ── Jira chip ── */
+.jchip{display:inline-block;padding:2px 8px;border-radius:3px;background:#1a237e;
+  color:#fff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap}
+.jchip:hover{background:#0d1466}
+
+/* ── WW cell ── */
+.ww-cell{white-space:nowrap;font-size:13px;color:#1a237e;font-weight:600}
+.ww-past{color:#b71c1c}
+
+/* ── Comment input ── */
+.comment-cell{overflow:visible!important;white-space:normal!important}
+.comment-input{width:100%;border:1px dashed #ccc;border-radius:3px;padding:2px 5px;
+  font-size:12px;background:#fffef0;resize:none;outline:none;font-family:inherit;line-height:1.3}
+.comment-input:focus{border-color:#3949ab;background:#f0f0ff}
+.save-dot{width:5px;height:5px;border-radius:50%;display:inline-block;margin-left:3px;vertical-align:middle}
+.save-dot.saved{background:#2e7d32}
+.save-dot.unsaved{background:#e65100}
+
+/* ── Status badge ── */
+.sbadge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap}
+.s-open{background:#e3f2fd;color:#0d47a1}
+.s-progress{background:#fff8e1;color:#e65100}
+.s-review{background:#f3e5f5;color:#6a1b9a}
+.s-done{background:#e8f5e9;color:#1b5e20}
+.s-closed{background:#eee;color:#555}
+.s-other{background:#fce4ec;color:#880e4f}
+
+/* ── Search / filter ── */
+.toolbar input{padding:6px 10px;border:1px solid #ccd;border-radius:5px;font-size:13px;outline:none}
+.toolbar input:focus{border-color:#3949ab}
+.count-lbl{font-size:13px;color:#888}
+.hidden{display:none}
+
+/* ── Per-column filter popup ── */
+.th-inner{display:flex;align-items:center;gap:3px}
+.filt-btn{background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;font-size:9px;
+  padding:0 2px;line-height:1;flex-shrink:0;border-radius:3px}
+.filt-btn:hover,.filt-btn.filt-active{color:#ffeb3b}
+.filt-btn.filt-active{font-weight:700}
+.fpop{position:fixed;background:#fff;border:1px solid #bbc;border-radius:7px;
+  box-shadow:0 6px 22px rgba(0,0,0,.22);z-index:10000;min-width:190px;max-width:270px;
+  padding:0;display:none}
+.fpop.open{display:block}
+.fpop-search{width:calc(100% - 16px);margin:7px 8px 3px;padding:5px 9px;
+  border:1px solid #ccd;border-radius:4px;font-size:13px;outline:none;display:block}
+.fpop-search:focus{border-color:#3949ab}
+.fpop-list{max-height:210px;overflow-y:auto;padding:2px 8px 4px}
+.fpop-list label{display:flex;align-items:center;gap:7px;padding:4px 0;
+  font-size:13px;color:#333;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fpop-list label:hover{color:#1a237e}
+.fpop-list input[type=checkbox]{accent-color:#3949ab;flex-shrink:0;cursor:pointer}
+.fpop-actions{display:flex;gap:6px;padding:5px 8px;border-top:1px solid #eee;margin-top:2px}
+.fpop-actions button{flex:1;padding:5px 0;border:none;border-radius:4px;
+  font-size:13px;cursor:pointer;font-weight:500}
+.fpop-clear{background:#eee;color:#555}.fpop-clear:hover{background:#ddd}
+.fpop-apply{background:#3949ab;color:#fff}.fpop-apply:hover{background:#1a237e}
+
+/* ── Milestone schedule widget ── */
+#scheduleWidget{
+  position:fixed;top:12px;right:16px;z-index:9999;
+  background:rgba(10,20,80,0.93);color:#c5cae9;
+  border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.4);
+  padding:8px 12px;font-size:10px;min-width:170px;
+  backdrop-filter:blur(4px);
+  border:1px solid rgba(57,73,171,.5);
+}
+#scheduleWidget .sw-title{
+  font-size:10px;font-weight:700;color:#9fa8da;letter-spacing:.5px;
+  margin-bottom:5px;text-transform:uppercase;
+}
+#scheduleWidget table{border-collapse:collapse;width:100%}
+#scheduleWidget td{padding:2px 5px;border-bottom:1px solid rgba(255,255,255,.07);vertical-align:top}
+#scheduleWidget tr:last-child td{border-bottom:none}
+#scheduleWidget .ms-label{color:#90caf9;font-weight:600;white-space:nowrap;width:54px;vertical-align:top}
+#scheduleWidget .ms-val{color:#e8eaf6;white-space:nowrap}
+#scheduleWidget .ms-sub{color:#9fa8da;font-size:9px;white-space:nowrap;padding-left:4px}
+#scheduleWidget .ms-sep td{padding:0!important;height:1px;background:rgba(255,255,255,.07);border-bottom:none!important}
+.sw-toggle{position:absolute;top:6px;right:8px;cursor:pointer;font-size:11px;
+  color:#9fa8da;background:none;border:none;padding:0;line-height:1}
+
+footer{text-align:center;padding:12px;color:#999;font-size:10px;margin-top:8px;border-top:1px solid #e0e0e0}
+</style>
+</head>
+<body>
+
+<!-- ── Fixed milestone schedule widget ── -->
+<div id="scheduleWidget">
+  <button class="sw-toggle" onclick="toggleSchedule()" title="Collapse">▲</button>
+  <div class="sw-title">Milestone Schedule</div>
+  <div id="swBody">
+    <table>
+      <tr>
+        <td class="ms-label" rowspan="3">IP&nbsp;Freeze</td>
+        <td class="ms-val">26WW14</td><td class="ms-sub">(IOdie)</td>
+      </tr>
+      <tr><td class="ms-val">26WW17</td><td class="ms-sub">GT IP</td></tr>
+      <tr><td class="ms-val">26WW20</td><td class="ms-sub">(Cdie)</td></tr>
+      <tr class="ms-sep"><td colspan="3"></td></tr>
+      <tr>
+        <td class="ms-label">TI</td>
+        <td class="ms-val">26WW26</td><td></td>
+      </tr>
+      <tr class="ms-sep"><td colspan="3"></td></tr>
+      <tr>
+        <td class="ms-label" rowspan="2">PO</td>
+        <td class="ms-val">27WW03</td><td class="ms-sub">POS</td>
+      </tr>
+      <tr><td class="ms-val">27WW12</td><td class="ms-sub">POE</td></tr>
+      <tr class="ms-sep"><td colspan="3"></td></tr>
+      <tr>
+        <td class="ms-label">Alpha</td>
+        <td class="ms-val">27WW24</td><td></td>
+      </tr>
+      <tr class="ms-sep"><td colspan="3"></td></tr>
+      <tr>
+        <td class="ms-label">Beta</td>
+        <td class="ms-val">27WW36</td><td></td>
+      </tr>
+      <tr class="ms-sep"><td colspan="3"></td></tr>
+      <tr>
+        <td class="ms-label">PV</td>
+        <td class="ms-val">28WW06</td><td></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<header>
+  <div>
+    <h1>⬆️ JGS Upstreaming Plan
+      <span class="badge-active">LIVE</span>
+    </h1>
+    <span style="font-size:11px;opacity:.7">Filter:
+      <a href="https://jira.devtools.intel.com/issues/?filter={{ filter_id }}" target="_blank" style="color:#9fa8da">{{ filter_id }}</a>
+      &nbsp;·&nbsp; {{ issues|length }} issues
+      &nbsp;·&nbsp; <a href="/" style="color:rgba(255,255,255,.75)">← Home</a>
+    </span>
+  </div>
+</header>
+
+<!-- ── Refresh bar ── -->
+<div style="margin:10px 28px 4px;display:flex;align-items:center;gap:10px">
+  <button id="refreshBtn" class="btn btn-refresh" onclick="refreshJira()">🔄 Refresh Jira Query</button>
+  <span id="refreshStatus" style="font-size:11px;color:#777"></span>
+  <span id="wwLabel" style="font-size:11px;color:#666;margin-left:auto">Current WW: <b>{{ current_ww_label }}</b></span>
+</div>
+
+<!-- ── Trend Graph ── -->
+<div class="section">
+  <div class="section-title">
+    Cumulative Upstreaming Plan – Actual Trend WW
+    <span class="section-sub">Step line · x = Work Week · y = cumulative Jira count</span>
+  </div>
+  <div class="graph-card">
+    <div class="graph-wrap">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ── Pending Tasks Table ── -->
+{% if pending_issues %}
+<div class="section">
+  <div class="section-title">
+    ⚠️ Pending Tasks
+    <span class="section-sub">Issues with Actual Trend WW ≤ {{ current_ww_label }} that are not yet done ({{ pending_issues|length }} items)</span>
+  </div>
+  <div class="tbl-wrap" style="max-height:35vh">
+    <table class="main" id="pendingTable">
+      <thead>
+        <tr>
+          <th class="col-key">Jira ID</th>
+          <th class="col-title">Title</th>
+          <th class="col-asgn">Assignee</th>
+          <th class="col-comp">Component</th>
+          <th class="col-ww">Actual Trend WW</th>
+          <th class="col-time">Est. Time</th>
+          <th class="col-status">Status</th>
+          <th class="col-comment">Comments ✏️</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for iss in pending_issues %}
+        {% set sl = iss.status.lower() %}
+        {% if 'in progress' in sl or 'progress' in sl %}{% set sc = 's-progress' %}
+        {% elif 'review' in sl %}{% set sc = 's-review' %}
+        {% elif sl == 'open' %}{% set sc = 's-open' %}
+        {% else %}{% set sc = 's-other' %}{% endif %}
+        <tr>
+          <td>
+            <a class="jchip" href="https://jira.devtools.intel.com/browse/{{ iss.key }}" target="_blank" rel="noopener">{{ iss.key }}</a>
+          </td>
+          <td class="title-cell" title="{{ iss.title }}">{{ iss.title }}</td>
+          <td style="font-size:10px;color:#555;overflow:hidden;text-overflow:ellipsis" title="{{ iss.assignee }}">{{ iss.assignee }}</td>
+          <td style="font-size:10px;overflow:hidden;text-overflow:ellipsis" title="{{ iss.raw_comp }}">{{ iss.component }}</td>
+          <td class="ww-cell ww-past">{{ iss.ww or '—' }}</td>
+          <td style="font-size:10px;color:#555;white-space:nowrap">{{ iss.estimated_time or '—' }}</td>
+          <td><span class="sbadge {{ sc }}">{{ iss.status }}</span></td>
+          <td class="comment-cell">
+            <textarea class="comment-input" rows="1" data-key="{{ iss.key }}"
+              onchange="saveComment('{{ iss.key }}', this)"
+              oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+            >{{ up_comments.get(iss.key, '') }}</textarea>
+            <span class="save-dot {% if up_comments.get(iss.key) %}saved{% else %}unsaved{% endif %}" id="dot2-{{ iss.key }}"></span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Jira Table ── -->
+<div class="section">
+  <div class="section-title">
+    Jira Issues
+    <span class="section-sub" id="tableCount">{{ issues|length }} total</span>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="searchBox" placeholder="Search title / key…" oninput="applyFilters()" style="width:220px">
+    <button class="btn" onclick="clearAllFilters()" style="background:#eee;color:#555;border:1px solid #ccd">✕ Clear Filters</button>
+    <span class="count-lbl" id="visibleCount"></span>
+    <button class="btn" onclick="exportToExcel()" style="background:#1b7f4e;color:#fff;margin-left:auto">📅 Export to Excel</button>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="main" id="mainTable">
+      <thead>
+        <tr>
+          <th class="col-key"><div class="th-inner">Jira ID</div></th>
+          <th class="col-title"><div class="th-inner">Title</div></th>
+          <th class="col-asgn"><div class="th-inner">Assignee <button class="filt-btn" id="fbtn-assignee" onclick="togglePop('assignee',this)">▼</button></div></th>
+          <th class="col-comp"><div class="th-inner">Component <button class="filt-btn" id="fbtn-comp" onclick="togglePop('comp',this)">▼</button></div></th>
+          <th class="col-ww"><div class="th-inner">Trend WW <button class="filt-btn" id="fbtn-ww" onclick="togglePop('ww',this)">▼</button></div></th>
+          <th class="col-time"><div class="th-inner">Est. Time <button class="filt-btn" id="fbtn-esttime" onclick="togglePop('esttime',this)">▼</button></div></th>
+          <th class="col-status"><div class="th-inner">Status <button class="filt-btn" id="fbtn-status" onclick="togglePop('status',this)">▼</button></div></th>
+          <th class="col-comment">Comments ✏️</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        {% for iss in issues %}
+        {% set sl = iss.status.lower() %}
+        {% if 'in progress' in sl or 'progress' in sl %}{% set sc = 's-progress' %}
+        {% elif 'review' in sl %}{% set sc = 's-review' %}
+        {% elif sl in ('done','closed','resolved','verified','cancelled','rejected') %}{% set sc = 's-done' %}
+        {% elif sl == 'open' %}{% set sc = 's-open' %}
+        {% else %}{% set sc = 's-other' %}{% endif %}
+        <tr data-comp="{{ iss.component }}" data-status="{{ iss.status }}" data-assignee="{{ iss.assignee }}" data-ww="{{ iss.ww }}" data-esttime="{{ iss.estimated_time }}">
+          <td>
+            <a class="jchip" href="https://jira.devtools.intel.com/browse/{{ iss.key }}" target="_blank" rel="noopener">{{ iss.key }}</a>
+          </td>
+          <td class="title-cell" title="{{ iss.title }}">{{ iss.title }}</td>
+          <td style="font-size:10px;color:#555;overflow:hidden;text-overflow:ellipsis" title="{{ iss.assignee }}">{{ iss.assignee }}</td>
+          <td style="font-size:10px;overflow:hidden;text-overflow:ellipsis" title="{{ iss.raw_comp }}">{{ iss.component }}</td>
+          <td class="ww-cell {% if iss.ww_sort != 9999 and iss.ww_sort <= current_ww_int %}ww-past{% endif %}">{{ iss.ww or '—' }}</td>
+          <td style="font-size:10px;color:#555;white-space:nowrap">{{ iss.estimated_time or '—' }}</td>
+          <td><span class="sbadge {{ sc }}">{{ iss.status }}</span></td>
+          <td class="comment-cell">
+            <textarea class="comment-input" rows="1" data-key="{{ iss.key }}"
+              onchange="saveComment('{{ iss.key }}', this)"
+              oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+            >{{ up_comments.get(iss.key, '') }}</textarea>
+            <span class="save-dot {% if up_comments.get(iss.key) %}saved{% else %}unsaved{% endif %}" id="dot-{{ iss.key }}"></span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="fpop" id="fpop-assignee"></div>
+<div class="fpop" id="fpop-comp"></div>
+<div class="fpop" id="fpop-ww"></div>
+<div class="fpop" id="fpop-esttime"></div>
+<div class="fpop" id="fpop-status"></div>
+
+<footer>JGS Upstreaming Plan · Intel Confidential · Jira filter {{ filter_id }}</footer>
+
+<script>
+// ── Graph data ────────────────────────────────────────────────────────────
+const graphLabels = {{ graph_labels | tojson }};
+const graphData   = {{ graph_data   | tojson }};
+const compClosureWW = {{ comp_closure_ww | tojson }};
+
+// ── Milestone vertical lines ──────────────────────────────────────────────
+const MILESTONES = [
+  { ww: '26WW14', label: 'IP Freeze (IOdie)', color: '#00838f' },
+  { ww: '26WW17', label: 'IP Freeze GT IP',   color: '#00695c' },
+  { ww: '26WW20', label: 'IP Freeze (Cdie)',  color: '#2e7d32' },
+  { ww: '26WW26', label: 'TI',               color: '#f57f17' },
+  { ww: '27WW03', label: 'PO (POS)',          color: '#e65100' },
+  { ww: '27WW12', label: 'PO (POE)',          color: '#bf360c' },
+  { ww: '27WW24', label: 'Alpha',             color: '#1565c0' },
+  { ww: '27WW36', label: 'Beta',              color: '#6a1b9a' },
+  { ww: '28WW06', label: 'PV',               color: '#b71c1c' },
+];
+
+const annotationConfig = {};
+MILESTONES.forEach((m, i) => {
+  if (!graphLabels.includes(m.ww)) return;
+  annotationConfig['ms' + i] = {
+    type: 'line',
+    xMin: m.ww, xMax: m.ww,
+    borderColor: m.color,
+    borderWidth: 1.8,
+    borderDash: [5, 4],
+    label: {
+      display: true,
+      content: m.label,
+      position: 'start',
+      rotation: -90,
+      backgroundColor: m.color,
+      color: '#fff',
+      font: { size: 9, weight: '600' },
+      padding: { x: 4, y: 3 },
+      yAdjust: 2,
+    },
+  };
+});
+
+// Long-pole "All Done" line
+if (compClosureWW['All']) {
+  const ww = graphLabels.includes(compClosureWW['All']) ? compClosureWW['All'] : graphLabels[graphLabels.length - 1];
+  annotationConfig['allDone'] = {
+    type: 'line',
+    xMin: ww, xMax: ww,
+    borderColor: '#1b5e20',
+    borderWidth: 2.2,
+    borderDash: [6, 3],
+    label: {
+      display: true,
+      content: 'Long pole: ' + compClosureWW['All'],
+      position: 'center',
+      rotation: -90,
+      backgroundColor: '#1b5e20',
+      color: '#fff',
+      font: { size: 9, weight: '700' },
+      padding: { x: 4, y: 3 },
+    },
+  };
+}
+
+const ctx = document.getElementById('trendChart').getContext('2d');
+const trendChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: graphLabels,
+    datasets: [{
+      label: 'Cumulative Jiras (Actual Trend WW)',
+      data: graphData,
+      borderColor: '#3949ab',
+      backgroundColor: 'rgba(57,73,171,0.09)',
+      borderWidth: 2.5,
+      pointRadius: graphLabels.length > 30 ? 3 : 5,
+      pointBackgroundColor: '#3949ab',
+      stepped: 'before',
+      fill: true,
+      tension: 0,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, labels: { font: { size: 12 }, color: '#333' } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.parsed.y} jiras targeted by ${ctx.label}`
+        }
+      },
+      annotation: { annotations: annotationConfig },
+    },
+    scales: {
+      x: {
+        ticks: { font: { size: 11 }, maxRotation: 45, color: '#555' },
+        grid: { color: '#eee' }
+      },
+      y: {
+        beginAtZero: true,
+        suggestedMax: {{ issues|length }},
+        ticks: { font: { size: 11 }, color: '#555', stepSize: 1 },
+        grid: { color: '#eee' },
+        title: { display: true, text: 'Cumulative Jiras', font: { size: 11 }, color: '#555' }
+      }
+    }
+  }
+});
+
+// ── Milestone schedule widget ─────────────────────────────────────────────
+function toggleSchedule() {
+  const body = document.getElementById('swBody');
+  const btn  = document.querySelector('.sw-toggle');
+  if (body.style.display === 'none') {
+    body.style.display = '';
+    btn.textContent = '▲';
+  } else {
+    body.style.display = 'none';
+    btn.textContent = '▼';
+  }
+}
+
+// ── Table filtering ───────────────────────────────────────────────────────
+const tbody   = document.getElementById('tableBody');
+const allRows = Array.from(tbody.querySelectorAll('tr'));
+
+const COL_DEFS = {
+  assignee: { attr: 'assignee', multi: false },
+  comp:     { attr: 'comp',     multi: false },
+  ww:       { attr: 'ww',       multi: false },
+  esttime:  { attr: 'esttime',  multi: false },
+  status:   { attr: 'status',   multi: false },
+};
+const filterSel = {};
+const COL_VALS  = {};
+Object.keys(COL_DEFS).forEach(k => { filterSel[k] = new Set(); COL_VALS[k] = []; });
+
+// Pre-compute sorted unique values (including blank) for every column
+function buildColVals() {
+  Object.keys(COL_DEFS).forEach(colId => {
+    const { attr, multi } = COL_DEFS[colId];
+    const vals = new Set();
+    allRows.forEach(row => {
+      const v = row.dataset[attr] !== undefined ? row.dataset[attr] : '';
+      if (multi) v.split('|').forEach(s => vals.add(s));
+      else vals.add(v);
+    });
+    COL_VALS[colId] = Array.from(vals).sort((a, b) => {
+      if (a === '' && b !== '') return -1;
+      if (b === '' && a !== '') return  1;
+      return a.localeCompare(b, undefined, { numeric: true });
+    });
+  });
+}
+buildColVals();
+
+let openPop = null;
+
+// Build popup using real DOM nodes — no innerHTML / HTML-entity bugs
+function buildPop(colId) {
+  const pop  = document.getElementById('fpop-' + colId);
+  const sel  = filterSel[colId];
+  const vals = COL_VALS[colId];
+  while (pop.firstChild) pop.removeChild(pop.firstChild);
+
+  const srch = document.createElement('input');
+  srch.className = 'fpop-search'; srch.placeholder = 'Search…';
+  srch.addEventListener('input', () => {
+    const q = srch.value.toLowerCase();
+    list.querySelectorAll('label').forEach(lbl =>
+      lbl.style.display = (!q || lbl.textContent.toLowerCase().includes(q)) ? '' : 'none');
+  });
+  pop.appendChild(srch);
+
+  const list = document.createElement('div');
+  list.className = 'fpop-list'; list.id = 'fpop-list-' + colId;
+
+  if (vals.length === 0) {
+    const msg = document.createElement('div');
+    msg.style.cssText = 'padding:6px 0;color:#999;font-size:13px';
+    msg.textContent = 'No values';
+    list.appendChild(msg);
+  }
+  vals.forEach(v => {
+    const lbl = document.createElement('label');
+    lbl.title = v || '(Blank)';
+    const cb  = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = sel.has(v);
+    cb.addEventListener('change', () => {
+      cb.checked ? sel.add(v) : sel.delete(v);
+      updateBtnState(colId);
+      applyFilters();
+    });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode('\u00a0' + (v === '' ? '(Blank)' : v)));
+    list.appendChild(lbl);
+  });
+  pop.appendChild(list);
+
+  const acts = document.createElement('div');
+  acts.className = 'fpop-actions';
+
+  const clrBtn = document.createElement('button');
+  clrBtn.className = 'fpop-clear'; clrBtn.textContent = 'Clear';
+  clrBtn.addEventListener('click', e => { e.stopPropagation(); sel.clear(); buildPop(colId); updateBtnState(colId); applyFilters(); });
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'fpop-apply'; closeBtn.textContent = 'Close';
+  closeBtn.addEventListener('click', e => { e.stopPropagation(); closePop(); });
+
+  acts.appendChild(clrBtn); acts.appendChild(closeBtn);
+  pop.appendChild(acts);
+}
+
+function togglePop(colId, btn) {
+  if (openPop && openPop !== colId) closePop();
+  const pop = document.getElementById('fpop-' + colId);
+  if (pop.classList.contains('open')) { closePop(); return; }
+  buildPop(colId);
+  const r = btn.getBoundingClientRect();
+  pop.style.top  = (r.bottom + 4) + 'px';
+  pop.style.left = Math.max(4, r.left - 80) + 'px';
+  pop.classList.add('open');
+  openPop = colId;
+  const si = pop.querySelector('.fpop-search');
+  if (si) { si.focus(); }
+}
+
+function closePop() {
+  if (!openPop) return;
+  document.getElementById('fpop-' + openPop).classList.remove('open');
+  openPop = null;
+}
+
+// Close popup on click outside (use mousedown so it fires before any click handler)
+document.addEventListener('mousedown', e => {
+  if (!openPop) return;
+  const pop = document.getElementById('fpop-' + openPop);
+  const btn = document.getElementById('fbtn-' + openPop);
+  if (!pop.contains(e.target) && !(btn && btn.contains(e.target))) closePop();
+});
+
+function clearAllFilters() {
+  Object.keys(filterSel).forEach(k => { filterSel[k].clear(); updateBtnState(k); });
+  document.getElementById('searchBox').value = '';
+  applyFilters();
+}
+
+function updateBtnState(colId) {
+  const btn = document.getElementById('fbtn-' + colId);
+  if (!btn) return;
+  const n = filterSel[colId].size;
+  btn.classList.toggle('filt-active', n > 0);
+  btn.textContent = n > 0 ? `\u25bc(${n})` : '\u25bc';
+}
+
+function applyFilters() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  let vis = 0;
+  allRows.forEach(row => {
+    let show = !q || row.textContent.toLowerCase().includes(q);
+    if (show) {
+      for (const [colId, sel] of Object.entries(filterSel)) {
+        if (sel.size === 0) continue;
+        const { attr, multi } = COL_DEFS[colId];
+        const v = row.dataset[attr] !== undefined ? row.dataset[attr] : '';
+        if (multi) {
+          const parts = v ? v.split('|') : [''];
+          if (!parts.some(x => sel.has(x))) { show = false; break; }
+        } else {
+          if (!sel.has(v)) { show = false; break; }
+        }
+      }
+    }
+    row.classList.toggle('hidden', !show);
+    if (show) vis++;
+  });
+  const el = document.getElementById('visibleCount');
+  if (el) el.textContent = `Showing ${vis} of ${allRows.length}`;
+  // update section title count too
+  const tc = document.getElementById('tableCount');
+  if (tc) tc.textContent = vis < allRows.length ? `${vis} of ${allRows.length}` : `${allRows.length} total`;
+}
+applyFilters();
+
+// ── Export to Excel ──────────────────────────────────────────────────────
+function exportToExcel() {
+  const headers = ['Jira ID', 'Title', 'Assignee', 'Component', 'Trend WW', 'Est. Time', 'Status', 'Comments'];
+  const rows = [headers];
+  allRows.forEach(row => {
+    if (row.classList.contains('hidden')) return;
+    const cells = row.querySelectorAll('td');
+    if (cells.length < 7) return;
+    const link = cells[0].querySelector('a');
+    rows.push([
+      link ? link.textContent.trim() : cells[0].textContent.trim(),
+      cells[1].textContent.trim(),
+      cells[2].textContent.trim(),
+      cells[3].textContent.trim(),
+      cells[4].textContent.trim(),
+      cells[5].textContent.trim(),
+      cells[6].textContent.trim(),
+      cells[7] ? cells[7].querySelector('textarea')?.value || '' : '',
+    ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  // Column widths
+  ws['!cols'] = [12,50,22,25,12,12,18,30].map(w => ({wch: w}));
+  // Bold header row
+  headers.forEach((_, i) => {
+    const cell = ws[XLSX.utils.encode_cell({r:0, c:i})];
+    if (cell) { cell.s = {font:{bold:true}}; }
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'JGS Upstreaming');
+  const now = new Date();
+  const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `JGS_Upstreaming_${ts}.xlsx`);
+}
+
+// ── Comment save ─────────────────────────────────────────────────────────
+function saveComment(key, ta) {
+  // Update dots in both the pending table and main table (same key may appear in both)
+  function setDot(id, ok) {
+    const d = document.getElementById(id);
+    if (!d) return;
+    d.classList.toggle('saved', ok);
+    d.classList.toggle('unsaved', !ok);
+  }
+  // Sync other textarea with same key so both show same comment
+  document.querySelectorAll(`textarea[data-key="${key}"]`).forEach(t => {
+    if (t !== ta) t.value = ta.value;
+  });
+  fetch('/jgs-upstreaming/save-comment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, comment: ta.value })
+  })
+  .then(r => r.json())
+  .then(() => { setDot('dot-' + key, true); setDot('dot2-' + key, true); })
+  .catch(() => { setDot('dot-' + key, false); setDot('dot2-' + key, false); });
+}
+
+// ── Jira refresh ─────────────────────────────────────────────────────────
+function refreshJira() {
+  const btn = document.getElementById('refreshBtn');
+  const st  = document.getElementById('refreshStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ Refreshing…';
+  st.textContent = '';
+  fetch('/jgs-upstreaming/refresh', { method: 'POST' })
+    .then(r => r.json())
+    .then(() => { st.textContent = 'Done – reloading…'; setTimeout(() => location.reload(), 800); })
+    .catch(() => { st.textContent = 'Error – check server log'; btn.disabled = false; btn.textContent = '🔄 Refresh Jira Query'; });
+}
+</script>
+</body>
+</html>

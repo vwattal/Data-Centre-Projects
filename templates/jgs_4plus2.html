@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JGS 4+2 Dashboard</title>
+<style>
+:root {
+  --blue:   #0071c5;
+  --dark:   #003c71;
+  --mid:    #0096d6;
+  --light:  #e8f4fd;
+  --green:  #27ae60;
+  --orange: #e67e22;
+  --red:    #c0392b;
+  --purple: #7a1fa2;
+  --bg:     #f0f3f7;
+  --border: #d0dce8;
+  --text:   #1a2530;
+  --muted:  #6b7b8d;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────────────── */
+header {
+  background: linear-gradient(135deg, var(--dark) 0%, var(--blue) 60%, var(--mid) 100%);
+  color: #fff;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+header h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: .3px; }
+header .sub { font-size: .68rem; opacity: .78; margin-top: 2px; }
+.hdr-right {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.hdr-right a {
+  color: #7dcfff; font-size: .7rem; text-decoration: none;
+}
+.hdr-right a:hover { text-decoration: underline; }
+.refresh-btn {
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.4);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: .72rem;
+  cursor: pointer;
+  transition: background .2s;
+}
+.refresh-btn:hover { background: rgba(255,255,255,.28); }
+.refresh-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── STATS BAR ───────────────────────────────────────────────────────────── */
+.stats-bar {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+.stat-chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: .72rem;
+  font-weight: 600;
+}
+.stat-chip .num { font-size: .88rem; font-weight: 700; }
+.chip-total   { background: #e8f4fd; color: var(--dark); }
+.chip-xekmd   { background: #dceeff; color: var(--blue); }
+.chip-ualkmd  { background: #fef0e6; color: var(--orange); }
+.chip-umd-sysman { background: #f0e6ff; color: #5a1e8a; }
+.chip-other   { background: #f5f0fa; color: var(--purple); }
+
+.meta-bar {
+  padding: 4px 16px;
+  background: #fafbfc;
+  border-bottom: 1px solid var(--border);
+  font-size: .68rem;
+  color: var(--muted);
+  display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+}
+
+/* ── ERROR BANNER ────────────────────────────────────────────────────────── */
+.error-banner {
+  margin: 12px 16px;
+  padding: 10px 14px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-left: 4px solid #e67e22;
+  border-radius: 5px;
+  font-size: .78rem;
+  color: #7d4a00;
+}
+.error-banner strong { display: block; margin-bottom: 3px; }
+
+/* ── TABLE CONTAINER ─────────────────────────────────────────────────────── */
+.table-wrap {
+  margin: 12px 16px 24px;
+  background: #fff;
+  border-radius: 7px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.1);
+  overflow: hidden;
+}
+.table-scroll { overflow-x: auto; }
+
+/* ── TABLE ───────────────────────────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  table-layout: fixed;
+}
+thead tr { background: var(--light); }
+th {
+  padding: 7px 8px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--dark);
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  font-size: 10.5px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--light);
+  user-select: none;
+}
+th .th-icon { margin-right: 3px; }
+tbody tr { border-bottom: 1px solid #edf1f6; }
+tbody tr:hover { background: #f7fafd; }
+tbody tr:last-child { border-bottom: none; }
+td { padding: 6px 8px; vertical-align: top; }
+
+/* Column widths */
+.col-hsd         { width: 100px; }
+.col-title       { width: 190px; }
+.col-xekmd       { width: 110px; }
+.col-ualkmd      { width: 110px; }
+.col-umd-sysman  { width: 130px; }
+.col-eff-xekmd   { width: 70px; }
+.col-eff-ualkmd  { width: 70px; }
+.col-eff-umd-sys { width: 70px; }
+.col-milestone   { width: 85px; }
+.col-ext-deps    { width: 150px; }
+.col-comments    { width: 190px; }
+.col-updated     { width: 95px; }
+
+/* HSD link */
+.hsd-link {
+  font-weight: 700;
+  color: var(--blue);
+  text-decoration: none;
+  font-size: 11px;
+}
+.hsd-link:hover { text-decoration: underline; }
+
+/* Title cell */
+.title-cell {
+  color: var(--text);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+.title-loading { color: #aaa; font-style: italic; font-size: 10px; }
+
+/* Jira cell — editable badge cells */
+.jira-cell { position: relative; }
+.jira-display { display: flex; flex-wrap: wrap; gap: 3px; align-items: flex-start; }
+.jira-edit-btn {
+  background: none; border: none; cursor: pointer; color: var(--muted);
+  font-size: 11px; padding: 0 2px; opacity: 0; line-height: 1;
+  transition: opacity .15s; flex-shrink: 0; margin-top: 1px;
+}
+td:hover .jira-edit-btn, .jira-edit-btn:focus { opacity: 1; }
+.jira-edit-btn:hover { color: var(--blue); }
+.jira-editor { display: none; margin-top: 2px; }
+.jira-input {
+  width: 100%; padding: 3px 6px;
+  border: 1px solid var(--blue); border-radius: 4px;
+  font-size: 10.5px; font-family: inherit; outline: none;
+  background: #f7faff; color: var(--text);
+}
+.jira-hint { font-size: 9px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
+/* Jira badges */
+.jira-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity .15s;
+}
+.jira-badge:hover { opacity: .8; text-decoration: underline; }
+.badge-xekmd  { background: #dceeff; color: #005094; border: 1px solid #b8d8f8; }
+.badge-ualkmd { background: #fef0e6; color: #b35a00; border: 1px solid #f7d4b0; }
+.badge-umd-sysman { background: #f0e6ff; color: #5a1e8a; border: 1px solid #d4b0ec; }
+.badge-ext-deps   { background: #e6f4ea; color: #1a5c28; border: 1px solid #a8d5b0; }
+.badge-other  { background: #f0ebf8; color: #5a1e8a; border: 1px solid #d0b8ec; }
+.badge-empty  { color: #ccc; font-size: 10px; font-style: italic; }
+
+/* Editable cells */
+.edit-cell {
+  min-height: 26px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  outline: none;
+  cursor: text;
+  line-height: 1.4;
+  font-family: inherit;
+  font-size: 11px;
+  word-break: break-word;
+  transition: border-color .15s, background .15s;
+}
+.edit-cell:empty::before {
+  content: attr(data-placeholder);
+  color: #bbb;
+  font-style: italic;
+  pointer-events: none;
+}
+.edit-cell:focus {
+  border-color: var(--blue);
+  background: #f7faff;
+  box-shadow: 0 0 0 2px rgba(0,113,197,.12);
+}
+.edit-cell.saving  { border-color: var(--orange); background: #fffbf5; }
+.edit-cell.saved   { border-color: var(--green);  background: #f5fdf7; animation: fade-border 1.5s forwards; }
+.edit-cell.error   { border-color: var(--red);    background: #fff5f5; }
+
+@keyframes fade-border {
+  0%   { border-color: var(--green); }
+  100% { border-color: transparent; }
+}
+
+/* Effort cells */
+.eff-cell {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dark);
+  white-space: nowrap;
+  text-align: right;
+}
+.eff-cell.zero { color: #ccc; font-weight: 400; }
+
+/* Totals row */
+tr.totals-row td {
+  background: var(--light);
+  font-weight: 700;
+  border-top: 2px solid var(--border);
+  font-size: 11px;
+}
+tr.totals-row .eff-cell { color: var(--blue); font-size: 12px; }
+
+/* Table section title */
+.table-section-title {
+  padding: 10px 16px 4px;
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: .2px;
+}
+
+
+.updated-cell {
+  font-size: 9.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1e3a5f;
+  color: #fff;
+  padding: 9px 18px;
+  border-radius: 6px;
+  font-size: .78rem;
+  box-shadow: 0 3px 14px rgba(0,0,0,.35);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .25s, transform .25s;
+  z-index: 1000;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+#toast.err  { background: #7d1c1c; }
+
+/* ── SPINNER ─────────────────────────────────────────────────────────────── */
+#spinner {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  display: none;
+}
+#spinner.show { display: flex; }
+.spin-box {
+  background: #fff;
+  padding: 20px 30px;
+  border-radius: 8px;
+  font-size: .85rem;
+  color: var(--dark);
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0,0,0,.2);
+}
+
+/* ── EMPTY STATE ─────────────────────────────────────────────────────────── */
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+.empty-state .icon { font-size: 2rem; margin-bottom: 8px; }
+.empty-state p { font-size: .82rem; }
+
+/* ── POLL INDICATOR ──────────────────────────────────────────────────────── */
+.poll-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-right: 4px;
+  vertical-align: middle;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .35; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div>
+    <h1>🔵 JGS 4+2 Dashboard</h1>
+    <div class="sub">
+      HSD → Jira tracker &nbsp;·&nbsp; xeKMD / UALkmd / UMD+Sysman &nbsp;·&nbsp;
+      {% if last_refresh %}Excel refreshed {{ last_refresh }}{% else %}Excel not yet loaded{% endif %}
+    </div>
+  </div>
+  <div class="hdr-right">
+    <a href="/" target="_self">← Back to Dashboard</a>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshExcel()">⟳ Refresh from SharePoint</button>
+  </div>
+</header>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-chip chip-total">
+    <span class="num" id="statHsd">{{ (jgs_rows | length) + (other_rows | length) }}</span> HSDs tracked
+  </div>
+  <div class="stat-chip chip-xekmd">
+    <span class="num" id="statXekmd">0</span> xeKMD Jiras
+  </div>
+  <div class="stat-chip chip-ualkmd">
+    <span class="num" id="statUalkmd">0</span> UALkmd Jiras
+  </div>
+  <div class="stat-chip chip-umd-sysman">
+    <span class="num" id="statUmdSysman">0</span> UMD/Sysman Jiras
+  </div>
+</div>
+
+<div class="meta-bar">
+  <span><span class="poll-dot"></span>Auto-polling every 60 s — edits are visible to everyone</span>
+  <span id="lastPoll"></span>
+</div>
+
+<!-- ERROR BANNER -->
+{% if excel_error %}
+<div class="error-banner">
+  <strong>⚠️ SharePoint data issue</strong>
+  {{ excel_error }}<br>
+  <small>If the Graph token is expired, run <code>python3 soc_automation/refresh_graph_token.py</code> and click "Refresh from SharePoint" above.</small>
+</div>
+{% endif %}
+
+<!-- TABLES -->
+{% macro render_table(rows, table_id, title) %}
+<div class="table-section-title">{{ title }}</div>
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table id="{{ table_id }}">
+      <thead>
+        <tr>
+          <th class="col-hsd"><span class="th-icon">🔗</span>HSD</th>
+          <th class="col-title"><span class="th-icon">📝</span>Title</th>
+          <th class="col-xekmd" style="border-top:3px solid #0071c5;"><span class="th-icon">🔵</span>xeKMD</th>
+          <th class="col-ualkmd" style="border-top:3px solid #e67e22;"><span class="th-icon">🟠</span>UALkmd</th>
+          <th class="col-umd-sysman" style="border-top:3px solid #7a1fa2;"><span class="th-icon">🟣</span>UMD / Sysman</th>
+          <th class="col-eff-xekmd" style="border-top:3px solid #0071c5;text-align:right;"><span class="th-icon">⏱</span>KMD h</th>
+          <th class="col-eff-ualkmd" style="border-top:3px solid #e67e22;text-align:right;"><span class="th-icon">⏱</span>UAL h</th>
+          <th class="col-eff-umd-sys" style="border-top:3px solid #7a1fa2;text-align:right;"><span class="th-icon">⏱</span>UMD/Sys h</th>
+          <th class="col-milestone" style="border-top:3px solid #00897b;"><span class="th-icon">📅</span>Milestone</th>
+          <th class="col-ext-deps" style="border-top:3px solid #546e7a;"><span class="th-icon">🔗</span>Ext Dependencies</th>
+          <th class="col-comments" style="border-top:3px solid #e67e22;"><span class="th-icon">💬</span>Comments</th>
+          <th class="col-updated"><span class="th-icon">🕐</span>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if rows %}
+          {% for row in rows %}
+          <tr data-hsd="{{ row.hsd_id }}">
+            <td>
+              <a class="hsd-link" href="{{ hsd_app_url }}{{ row.hsd_id }}" target="_blank"
+                 title="Open HSD {{ row.hsd_id }}">{{ row.hsd_id }}</a>
+            </td>
+            <td>
+              <div class="title-cell">
+                {% if row.title %}{{ row.title }}{% else %}<span class="title-loading">Loading…</span>{% endif %}
+              </div>
+            </td>
+            {% for col_key, badge_cls in [('xekmd','badge-xekmd'),('ualkmd','badge-ualkmd'),('umd_sysman','badge-umd-sysman')] %}
+            <td>
+              <div class="jira-cell" data-hsd="{{ row.hsd_id }}" data-col="{{ col_key }}">
+                <div class="jira-display">
+                  {% set jiras = row[col_key] %}
+                  {% if jiras %}{% for jid in jiras %}
+                    <a class="jira-badge {{ badge_cls }}" href="{{ jira_base }}{{ jid }}" target="_blank">{{ jid }}</a>
+                  {% endfor %}{% else %}
+                    <span class="badge-empty">—</span>
+                  {% endif %}
+                  <button class="jira-edit-btn" title="Edit Jira IDs" onclick="openJiraEdit(this.closest('.jira-cell'))">✎</button>
+                </div>
+                <div class="jira-editor">
+                  <input type="text" class="jira-input"
+                         value="{{ row[col_key] | join(' ') }}"
+                         placeholder="VLK-123 NEO-456"
+                         onblur="closeJiraEdit(this)" onkeydown="jiraKeydown(event,this)" />
+                  <div class="jira-hint">Space/comma separated · Enter saves · Esc cancels</div>
+                </div>
+              </div>
+            </td>
+            {% endfor %}
+            {% for eff_val in [row.effort_xekmd, row.effort_ualkmd, row.effort_umd_sysman] %}
+            <td><div class="eff-cell{% if not eff_val %} zero{% endif %}">{{ eff_val ~ 'h' if eff_val else '—' }}</div></td>
+            {% endfor %}
+            <td>
+              <div class="edit-cell" contenteditable="true"
+                   data-hsd="{{ row.hsd_id }}" data-field="eta"
+                   data-placeholder="e.g. 26WW20" spellcheck="false"
+                   onblur="schedSave(this)" onkeydown="editKeydown(event,this)">{{ row.eta }}</div>
+            </td>
+            <td>
+              <div class="ext-deps-cell" data-hsd="{{ row.hsd_id }}">
+                <div class="jira-display">
+                  {% if row.ext_dep_ids %}{% for jid in row.ext_dep_ids %}
+                    <a class="jira-badge badge-ext-deps" href="{{ jira_base }}{{ jid }}" target="_blank">{{ jid }}</a>
+                  {% endfor %}{% else %}
+                    <span class="badge-empty">—</span>
+                  {% endif %}
+                  <button class="jira-edit-btn" title="Edit Ext Dep Jiras" onclick="openExtDepsEdit(this.closest('.ext-deps-cell'))">&#9998;</button>
+                </div>
+                <div class="jira-editor" style="display:none;">
+                  <input type="text" class="jira-input"
+                         value="{{ row.ext_dep_ids | join(' ') }}"
+                         placeholder="VLK-123 NEO-456"
+                         onblur="closeExtDepsEdit(this)" onkeydown="extDepsKeydown(event,this)" />
+                  <div class="jira-hint">Space/comma separated · Enter saves · Esc cancels</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="edit-cell" contenteditable="true"
+                   data-hsd="{{ row.hsd_id }}" data-field="comments"
+                   data-placeholder="Add a comment…" spellcheck="true"
+                   onblur="schedSave(this)" onkeydown="editKeydown(event,this)">{{ row.comments }}</div>
+            </td>
+            <td>
+              <div class="updated-cell" data-hsd-updated="{{ row.hsd_id }}">{{ row.updated_at or '—' }}</div>
+            </td>
+          </tr>
+          {% endfor %}
+          {% set t_xekmd      = rows | sum(attribute='effort_xekmd') %}
+          {% set t_ualkmd     = rows | sum(attribute='effort_ualkmd') %}
+          {% set t_umd_sysman = rows | sum(attribute='effort_umd_sysman') %}
+          {% set t_total      = rows | sum(attribute='effort_total') %}
+          <tr class="totals-row">
+            <td colspan="5" style="text-align:right;color:var(--muted);font-size:10.5px;">Total effort →</td>
+            <td><div class="eff-cell{% if not t_xekmd %} zero{% endif %}">{{ t_xekmd ~ 'h' if t_xekmd else '—' }}</div></td>
+            <td><div class="eff-cell{% if not t_ualkmd %} zero{% endif %}">{{ t_ualkmd ~ 'h' if t_ualkmd else '—' }}</div></td>
+            <td><div class="eff-cell{% if not t_umd_sysman %} zero{% endif %}">{{ t_umd_sysman ~ 'h' if t_umd_sysman else '—' }}</div></td>
+            <td colspan="4" style="color:var(--blue);font-weight:700;font-size:11.5px;">
+              Grand total: {{ t_total ~ 'h' if t_total else '—' }}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="14">
+            <div class="empty-state">
+              <div class="icon">📭</div>
+              <p>No HSD rows found.
+                {% if excel_error %}Check the error above.{% else %}
+                The spreadsheet may be empty or the Excel has not downloaded yet.
+                {% endif %}
+              </p>
+            </div>
+          </td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endmacro %}
+
+{{ render_table(jgs_rows,   'jgsTable',   '📋 JGS 4+2 — Core HSDs') }}
+{{ render_table(other_rows, 'otherTable', '📋 Other HSDs with Potential Impact') }}
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- SPINNER -->
+<div id="spinner"><div class="spin-box">⟳ Refreshing from SharePoint…</div></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   Helpers
+═══════════════════════════════════════════════════════════════════════ */
+let _toastTimer = null;
+function toast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('err', !!isErr);
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), isErr ? 5000 : 2800);
+}
+
+function setSpinner(on) {
+  document.getElementById('spinner').classList.toggle('show', on);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Stats bar computation
+═══════════════════════════════════════════════════════════════════════ */
+const _JIRA_BASE   = '{{ jira_base }}';
+const _BADGE_CLASS = { xekmd:'badge-xekmd', ualkmd:'badge-ualkmd', umd_sysman:'badge-umd-sysman' };
+
+function computeStats() {
+  let xekmd = 0, ualkmd = 0, umdSysman = 0;
+  document.querySelectorAll('.badge-xekmd').forEach(() => xekmd++);
+  document.querySelectorAll('.badge-ualkmd').forEach(() => ualkmd++);
+  document.querySelectorAll('.badge-umd-sysman').forEach(() => umdSysman++);
+  document.getElementById('statXekmd').textContent  = xekmd;
+  document.getElementById('statUalkmd').textContent = ualkmd;
+  document.getElementById('statUmdSysman').textContent = umdSysman;
+}
+computeStats();
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Editable cells — save on blur (debounced)
+═══════════════════════════════════════════════════════════════════════ */
+const _saveTimers  = {};   // hsd:field → timer ID
+const _lastSaved   = {};   // hsd:field → last saved value
+const _focusedCell = { el: null };
+
+function editKeydown(evt, el) {
+  // Ctrl+Enter / Cmd+Enter → commit & blur (for Comments multiline)
+  if ((evt.ctrlKey || evt.metaKey) && evt.key === 'Enter') {
+    evt.preventDefault();
+    el.blur();
+  }
+  // Escape → restore last saved value and blur
+  if (evt.key === 'Escape') {
+    const k = el.dataset.hsd + ':' + el.dataset.field;
+    if (k in _lastSaved) el.innerText = _lastSaved[k];
+    el.blur();
+  }
+}
+
+function schedSave(el) {
+  const k = el.dataset.hsd + ':' + el.dataset.field;
+  clearTimeout(_saveTimers[k]);
+  _saveTimers[k] = setTimeout(() => doSave(el), 400);
+  _focusedCell.el = null;
+}
+
+function doSave(el) {
+  const hsd   = el.dataset.hsd;
+  const field = el.dataset.field;
+  const value = el.innerText.trim();
+  const k     = hsd + ':' + field;
+
+  if (_lastSaved[k] === value) return;   // no change
+
+  el.classList.add('saving');
+  el.classList.remove('saved', 'error');
+
+  fetch('/jgs-4plus2/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hsd_id: hsd, field, value })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      _lastSaved[k] = value;
+      el.classList.remove('saving');
+      el.classList.add('saved');
+      // Update updated_at cell optimistically
+      const ts = new Date().toISOString().slice(0,16).replace('T',' ') + ' UTC';
+      const upd = document.querySelector(`[data-hsd-updated="${hsd}"]`);
+      if (upd) upd.textContent = ts;
+      toast('✓ Saved');
+    } else {
+      el.classList.remove('saving');
+      el.classList.add('error');
+      toast('Save failed: ' + (data.error || 'unknown error'), true);
+    }
+  })
+  .catch(err => {
+    el.classList.remove('saving');
+    el.classList.add('error');
+    toast('Network error — save failed', true);
+  });
+}
+
+// Initialise _lastSaved from current cell text so we can detect changes
+document.querySelectorAll('.edit-cell').forEach(el => {
+  const k = el.dataset.hsd + ':' + el.dataset.field;
+  _lastSaved[k] = el.innerText.trim();
+  el.addEventListener('focus', () => { _focusedCell.el = el; });
+});
+
+// Seed _lastSaved for Jira cells from rendered badges
+document.querySelectorAll('.jira-cell').forEach(cell => {
+  const hsd = cell.dataset.hsd;
+  const col = cell.dataset.col;
+  const ids = Array.from(cell.querySelectorAll('.jira-badge')).map(b => b.textContent.trim());
+  _lastSaved[hsd + ':jira_' + col] = ids.join(' ');
+});
+// Seed _lastSaved for ext-deps cells
+document.querySelectorAll('.ext-deps-cell').forEach(cell => {
+  const ids = Array.from(cell.querySelectorAll('.jira-badge')).map(b => b.textContent.trim());
+  _lastSaved[cell.dataset.hsd + ':ext_deps'] = ids.join(' ');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Editable Jira cells
+═══════════════════════════════════════════════════════════════════════ */
+function openJiraEdit(cell) {
+  const display = cell.querySelector('.jira-display');
+  const editor  = cell.querySelector('.jira-editor');
+  const input   = cell.querySelector('.jira-input');
+  // Pre-fill from current badges
+  const ids = Array.from(display.querySelectorAll('.jira-badge')).map(b => b.textContent.trim());
+  input.value = ids.join(' ');
+  display.style.display = 'none';
+  editor.style.display  = 'block';
+  input.focus();
+  input.select();
+}
+
+function jiraKeydown(evt, input) {
+  if (evt.key === 'Enter')  { evt.preventDefault(); input.blur(); }
+  if (evt.key === 'Escape') {
+    const cell = input.closest('.jira-cell');
+    const k    = cell.dataset.hsd + ':jira_' + cell.dataset.col;
+    const saved = (_lastSaved[k] || '').split(/\s+/).filter(Boolean);
+    _rebuildBadges(cell, saved);
+    cell.querySelector('.jira-editor').style.display  = 'none';
+    cell.querySelector('.jira-display').style.display = '';
+  }
+}
+
+function closeJiraEdit(input) {
+  const cell    = input.closest('.jira-cell');
+  const display = cell.querySelector('.jira-display');
+  const editor  = cell.querySelector('.jira-editor');
+  const hsd     = cell.dataset.hsd;
+  const col     = cell.dataset.col;
+  const ids     = input.value.split(/[\s,]+/).filter(s => /^[A-Za-z]+-\d+$/.test(s)).map(s => s.toUpperCase());
+  const k       = hsd + ':jira_' + col;
+
+  editor.style.display  = 'none';
+  display.style.display = '';
+  _rebuildBadges(cell, ids);
+
+  if (_lastSaved[k] === ids.join(' ')) return;  // no change
+  _lastSaved[k] = ids.join(' ');
+
+  const ts = new Date().toISOString().slice(0,16).replace('T',' ') + ' UTC';
+  fetch('/jgs-4plus2/save', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ hsd_id: hsd, field: 'jira_' + col, value: ids.join(' ') })
+  }).then(r => r.json()).then(data => {
+    if (data.ok) {
+      const upd = document.querySelector(`[data-hsd-updated="${hsd}"]`);
+      if (upd) upd.textContent = ts;
+      toast('✓ Saved');
+      computeStats();
+    } else {
+      toast('Save failed: ' + (data.error || ''), true);
+    }
+  }).catch(() => toast('Network error', true));
+}
+
+function _rebuildBadges(cell, ids) {
+  const display = cell.querySelector('.jira-display');
+  const col     = cell.dataset.col;
+  const cls     = _BADGE_CLASS[col] || 'badge-other';
+  let html = '';
+  if (ids.length) {
+    html = ids.map(id =>
+      `<a class="jira-badge ${cls}" href="${_JIRA_BASE}${id}" target="_blank">${id}</a>`
+    ).join('');
+  } else {
+    html = '<span class="badge-empty">—</span>';
+  }
+  html += '<button class="jira-edit-btn" title="Edit Jira IDs" onclick="openJiraEdit(this.closest(\'.jira-cell\'))">✎</button>';
+  display.innerHTML = html;
+}
+function openExtDepsEdit(cell) {
+  const display = cell.querySelector('.jira-display');
+  const input   = cell.querySelector('.jira-input');
+  const ids = Array.from(display.querySelectorAll('.jira-badge')).map(b => b.textContent.trim());
+  input.value = ids.join(' ');
+  display.style.display = 'none';
+  cell.querySelector('.jira-editor').style.display = 'block';
+  input.focus();
+  input.select();
+}
+function extDepsKeydown(evt, input) {
+  if (evt.key === 'Enter')  { evt.preventDefault(); input.blur(); }
+  if (evt.key === 'Escape') {
+    const cell = input.closest('.ext-deps-cell');
+    const saved = (_lastSaved[cell.dataset.hsd + ':ext_deps'] || '').split(/\s+/).filter(Boolean);
+    _rebuildExtDepsBadges(cell, saved);
+    cell.querySelector('.jira-editor').style.display  = 'none';
+    cell.querySelector('.jira-display').style.display = '';
+  }
+}
+function closeExtDepsEdit(input) {
+  const cell    = input.closest('.ext-deps-cell');
+  const display = cell.querySelector('.jira-display');
+  const hsd     = cell.dataset.hsd;
+  const ids     = input.value.split(/[\s,]+/).filter(s => /^[A-Za-z]+-\d+$/.test(s)).map(s => s.toUpperCase());
+  const k       = hsd + ':ext_deps';
+  cell.querySelector('.jira-editor').style.display = 'none';
+  display.style.display = '';
+  _rebuildExtDepsBadges(cell, ids);
+  if (_lastSaved[k] === ids.join(' ')) return;
+  _lastSaved[k] = ids.join(' ');
+  const ts = new Date().toISOString().slice(0,16).replace('T',' ') + ' UTC';
+  fetch('/jgs-4plus2/save', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ hsd_id: hsd, field: 'ext_deps', value: ids.join(' ') })
+  }).then(r => r.json()).then(data => {
+    if (data.ok) {
+      const upd = document.querySelector(`[data-hsd-updated="${hsd}"]`);
+      if (upd) upd.textContent = ts;
+      toast('\u2713 Saved');
+    } else { toast('Save failed: ' + (data.error || ''), true); }
+  }).catch(() => toast('Network error', true));
+}
+function _rebuildExtDepsBadges(cell, ids) {
+  const display = cell.querySelector('.jira-display');
+  let html = ids.length
+    ? ids.map(id => `<a class="jira-badge badge-ext-deps" href="${_JIRA_BASE}${id}" target="_blank">${id}</a>`).join('')
+    : '<span class="badge-empty">—</span>';
+  html += '<button class="jira-edit-btn" title="Edit Ext Dep Jiras" onclick="openExtDepsEdit(this.closest(\'.ext-deps-cell\'))">\u270e</button>';
+  display.innerHTML = html;
+}
+/* ═══════════════════════════════════════════════════════════════════════
+   Refresh from SharePoint
+═══════════════════════════════════════════════════════════════════════ */
+function refreshExcel() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  setSpinner(true);
+  fetch('/jgs-4plus2/refresh-excel', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      setSpinner(false);
+      btn.disabled = false;
+      if (data.ok) {
+        toast('✓ Excel refreshed — reloading page…');
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        toast('Refresh failed: ' + (data.error || 'unknown'), true);
+      }
+    })
+    .catch(() => {
+      setSpinner(false);
+      btn.disabled = false;
+      toast('Network error during refresh', true);
+    });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   60-second polling — update ETA / Comments / updated_at from server
+   (skips cells currently being edited)
+═══════════════════════════════════════════════════════════════════════ */
+function pollUpdates() {
+  fetch('/jgs-4plus2/api/data')
+    .then(r => r.json())
+    .then(data => {
+      const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      document.getElementById('lastPoll').textContent = 'Last poll: ' + now;
+
+      for (const [hsd, vals] of Object.entries(data)) {
+        // Text cells (milestone / comments)
+        for (const field of ['eta', 'comments']) {
+          const el = document.querySelector(`.edit-cell[data-hsd="${hsd}"][data-field="${field}"]`);
+          if (!el || _focusedCell.el === el) continue;
+          const k  = hsd + ':' + field;
+          const sv = vals[field] || '';
+          if (_lastSaved[k] !== sv) { el.innerText = sv; _lastSaved[k] = sv; }
+        }
+        // Jira cells
+        for (const col of ['xekmd', 'ualkmd', 'umd_sysman']) {
+          const dbKey = 'jira_' + col;
+          if (!(dbKey in vals)) continue;
+          const cell = document.querySelector(`.jira-cell[data-hsd="${hsd}"][data-col="${col}"]`);
+          if (!cell) continue;
+          // Skip if in edit mode
+          if (cell.querySelector('.jira-editor').style.display !== 'none') continue;
+          const k  = hsd + ':' + dbKey;
+          const sv = vals[dbKey] || '';
+          if (_lastSaved[k] !== sv) {
+            _lastSaved[k] = sv;
+            const ids = sv.split(/\s+/).filter(Boolean);
+            _rebuildBadges(cell, ids);
+          }
+        }
+        // Ext-deps cells
+        const extCell = document.querySelector(`.ext-deps-cell[data-hsd="${hsd}"]`);
+        if (extCell && extCell.querySelector('.jira-editor').style.display === 'none') {
+          const k  = hsd + ':ext_deps';
+          const sv = vals.ext_deps || '';
+          if (_lastSaved[k] !== sv) {
+            _lastSaved[k] = sv;
+            _rebuildExtDepsBadges(extCell, sv.split(/\s+/).filter(s => /^[A-Za-z]+-\d+$/.test(s)));
+          }
+        }
+        // Updated-at
+        const upd = document.querySelector(`[data-hsd-updated="${hsd}"]`);
+        if (upd && vals.updated_at) upd.textContent = vals.updated_at;
+      }
+    })
+    .catch(() => {/* silent — network blip */});
+}
+
+setInterval(pollUpdates, 60000);
+
+// Initial poll to pick up any changes made while page was loading
+setTimeout(pollUpdates, 3000);
+</script>
+</body>
+</html>

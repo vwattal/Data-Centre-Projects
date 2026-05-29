@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CRI Daily TF</title>
+<style>
+:root{
+  --blue:#0068b5; --dark:#003c71; --mid:#0096d6; --light:#e8f4fd;
+  --green:#27ae60; --orange:#e67e22; --red:#c0392b;
+  --bg:#f0f3f7; --border:#d0dce8; --text:#1a2530; --muted:#6b7b8d;
+  --teal:#00695c; --purple:#6a1b9a;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);font-size:11px;font-weight:600;}
+
+header{
+  background:linear-gradient(135deg,var(--dark) 0%,var(--blue) 60%,var(--mid) 100%);
+  color:#fff;padding:9px 20px;display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);
+}
+header h1{font-size:1rem;font-weight:700;letter-spacing:.4px;}
+header .sub{font-size:.67rem;opacity:.75;margin-top:1px;}
+header .right{text-align:right;font-size:.67rem;opacity:.8;}
+header .right a{color:#7dcfff;text-decoration:none;font-weight:600;}
+header .right a:hover{text-decoration:underline;}
+
+.meta-bar{
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+  padding:4px 16px;background:#fff;border-bottom:1px solid var(--border);
+  font-size:.67rem;color:var(--muted);
+}
+.meta-bar strong{color:var(--dark);}
+.poll-dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#27ae60;margin-right:3px;vertical-align:middle;
+  animation:blink 2s infinite;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+.refresh-btn{
+  margin-left:auto;padding:3px 10px;font-size:.68rem;font-weight:700;
+  background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;
+}
+.refresh-btn:hover{background:var(--dark);}
+.export-btn{
+  padding:3px 10px;font-size:.68rem;font-weight:700;
+  background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer;
+}
+.export-btn:hover{background:#1e8449;}
+
+.error-banner{
+  background:#fde8e8;color:#c0392b;border-left:4px solid #c0392b;
+  padding:8px 16px;font-size:.8rem;font-weight:700;
+}
+
+.container{padding:10px 14px;display:flex;flex-direction:column;gap:10px;}
+.tables-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:1100px){.tables-grid{grid-template-columns:1fr;}}
+
+.tcard{background:#fff;border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.1);overflow:hidden;}
+.tcard-hdr{
+  display:flex;align-items:center;gap:8px;padding:6px 12px;
+  border-bottom:3px solid var(--blue);
+  background:linear-gradient(90deg,var(--light),#fff);
+}
+.tcard-hdr.xpum  {border-color:var(--purple);}
+.tcard-hdr.xekmd {border-color:var(--teal);}
+.tcard-hdr .icon{font-size:1rem;}
+.tcard-hdr .label{font-size:.82rem;font-weight:700;color:var(--dark);}
+.tcard-hdr .count{
+  margin-left:auto;padding:1px 7px;border-radius:8px;font-size:.66rem;font-weight:700;
+  background:#e2e3e5;color:#383d41;
+}
+
+.tw{overflow-x:auto;max-height:calc(100vh - 200px);overflow-y:auto;}
+table{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed;}
+thead tr{background:var(--light);}
+th{
+  padding:5px 7px;text-align:left;font-weight:700;color:var(--dark);
+  border-bottom:2px solid var(--border);font-size:10px;
+  position:sticky;top:0;z-index:1;background:var(--light);white-space:nowrap;
+}
+td{padding:3px 5px;border-bottom:1px solid #eaecf0;vertical-align:top;}
+tbody tr:hover{background:#f4f9ff;}
+tbody tr:last-child td{border-bottom:none;}
+
+.col-feat{width:24%;}
+.col-pri {width:5%;}
+.col-eta {width:8%;}
+.col-stat{width:35%;}
+.col-blok{width:28%;}
+
+.ecell{
+  display:block;min-height:16px;padding:2px 5px;border-radius:4px;
+  outline:none;cursor:text;white-space:pre-wrap;word-break:break-word;
+  font-size:.72rem;font-weight:600;line-height:1.45;
+  color:var(--text);border:1px solid transparent;
+  transition:background .12s, border-color .12s;
+}
+.ecell:hover{background:#f0f7ff;border-color:#b3d7f5;}
+.ecell:focus{background:#e8f4ff;border-color:var(--mid);box-shadow:0 0 0 1px var(--mid);}
+.ecell:empty::before{content:'—';color:#ccc;font-style:italic;}
+.ecell.saving{background:#fff9c4 !important;}
+.ecell.saved {background:#e8f5e9 !important;}
+.ecell.synced{background:#e3f2fd !important;transition:background .3s;}
+
+.ecell-pri{text-align:center;font-size:.7rem;font-weight:700;}
+.ecell-blk{color:#c0392b;}
+.ecell-blk:focus{background:#fde8e8;border-color:#c0392b;box-shadow:0 0 0 1px #c0392b;}
+
+.upd-stamp{font-size:.58rem;color:#aaa;margin-top:1px;display:block;}
+.reset-btn{
+  display:none;font-size:.55rem;color:#aaa;background:none;border:none;
+  cursor:pointer;padding:0 2px;vertical-align:middle;opacity:.6;
+  line-height:1;
+}
+.reset-btn:hover{color:#c0392b;opacity:1;}
+td:hover .reset-btn{display:inline;}
+
+footer{text-align:center;font-size:.65rem;color:var(--muted);padding:6px;opacity:.7;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div style="font-size:.68rem;opacity:.7;margin-bottom:2px;">
+      Intel® INTERNAL &nbsp;·&nbsp; Data Centre Graphics &amp; Compute Engineering
+    </div>
+    <h1>📋 CRI Daily TF</h1>
+    <div class="sub">Pending Driver Features — XPUM/Sysman &amp; XeKMD · TF Meeting Minutes (latest WW)</div>
+  </div>
+  <div class="right">
+    <div>Last fetched: <strong>{{ last_updated }}</strong></div>
+    <div style="margin-top:3px;">
+      <a href="https://intel.sharepoint.com/:x:/r/sites/druid/Shared%20Documents/Crescent%20Island/PSXT/Pending%20Driver%20Features%20enabling.xlsx?d=w2e76f07e41494533a34547eccf471b52&csf=1&web=1&e=vPlFTH"
+         target="_blank">📂 Source Excel</a>
+      &nbsp;·&nbsp;
+      <a href="/">← Dashboard</a>
+    </div>
+  </div>
+</header>
+
+<div class="meta-bar">
+  <span>🟣 <strong>XPUM/Sysman</strong> — {{ xpum_rows|length }} features</span>
+  <span>🟢 <strong>XeKMD Pending</strong> — {{ xekmd_rows|length }} features</span>
+  <span><span class="poll-dot"></span>Live sync every 30 s — edits visible to all users</span>
+  <span id="lastPoll" style="color:#aaa;"></span>
+  <button class="export-btn" id="exportBtn" onclick="exportSlides()">📊 Export to Slides</button>
+  <button class="refresh-btn" id="refreshBtn" onclick="forceRefresh()">⟳ Refresh Excel</button>
+</div>
+
+{% if error %}
+<div class="error-banner">⚠ {{ error }}</div>
+{% endif %}
+
+<div class="container">
+  <div class="tables-grid">
+
+    <!-- XPUM / Sysman -->
+    <div class="tcard">
+      <div class="tcard-hdr xpum">
+        <span class="icon">🟣</span>
+        <span class="label">XPUM / Sysman</span>
+        <span class="count">{{ xpum_rows|length }} items</span>
+      </div>
+      <div class="tw">
+        <table>
+          <colgroup>
+            <col class="col-feat"/><col class="col-pri"/>
+            <col class="col-eta"/><col class="col-stat"/><col class="col-blok"/>
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Feature</th><th>Priority</th><th>ETA</th>
+              <th>TF Meeting Minutes (latest WW)</th><th>Blocker</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in xpum_rows %}
+            <tr>
+              <td><span class="ecell" contenteditable="true"
+                data-row="{{ r.row_id }}" data-field="feature">{{ r.feature }}</span></td>
+              <td><span class="ecell ecell-pri" contenteditable="true"
+                data-row="{{ r.row_id }}" data-field="priority">{{ r.priority }}</span></td>
+              <td><span class="ecell" contenteditable="true"
+                data-row="{{ r.row_id }}" data-field="eta">{{ r.eta }}</span></td>
+              <td>
+                <span class="ecell" contenteditable="true"
+                  data-row="{{ r.row_id }}" data-field="status">{{ r.status }}</span>
+                <button class="reset-btn" title="Reset to Excel value"
+                  onclick="resetField('{{ r.row_id }}','status',this)">↺</button>
+                {% if r.updated_at %}<span class="upd-stamp">{{ r.updated_at }}</span>{% endif %}
+              </td>
+              <td><span class="ecell ecell-blk" contenteditable="true"
+                data-row="{{ r.row_id }}" data-field="blocker">{{ r.blocker }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px;">No data available</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- XeKMD Pending -->
+    <div class="tcard">
+      <div class="tcard-hdr xekmd">
+        <span class="icon">🟢</span>
+        <span class="label">XeKMD Pending</span>
+        <span class="count">{{ xekmd_rows|length }} items</span>
+      </div>
+      <div class="tw">
+        <table>
+          <colgroup>
+            <col class="col-feat"/><col class="col-pri"/>
+            <col class="col-eta"/><col class="col-stat"/><col class="col-blok"/>
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Feature</th><th>Priority</th><th>ETA</th>
+              <th>TF Meeting Minutes (latest WW)</th><th>Blocker</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in xekmd_rows %}
+            <tr>
+              <td><span class="ecell" contenteditable="true"
+                data-row="{{ r.row_id }}" data-field="feature">{{ r.feature }}</span></td>
+              <td><span class="ecell ecell-pri" contenteditable="true"
+                data-row="{{ r.row_id }}" data-field="priority">{{ r.priority }}</span></td>
+              <td><span class="ecell" contenteditable="true"
+                data-row="{{ r.row_id }}" data-field="eta">{{ r.eta }}</span></td>
+              <td>
+                <span class="ecell" contenteditable="true"
+                  data-row="{{ r.row_id }}" data-field="status">{{ r.status }}</span>
+                <button class="reset-btn" title="Reset to Excel value"
+                  onclick="resetField('{{ r.row_id }}','status',this)">↺</button>
+                {% if r.updated_at %}<span class="upd-stamp">{{ r.updated_at }}</span>{% endif %}
+              </td>
+              <td><span class="ecell ecell-blk" contenteditable="true"
+                data-row="{{ r.row_id }}" data-field="blocker">{{ r.blocker }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px;">No data available</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>Intel Corporation &nbsp;·&nbsp; Data Centre Graphics &amp; Compute Engineering &nbsp;·&nbsp; Internal Use Only</footer>
+
+<script>
+// ── Export to PowerPoint slides ───────────────────────────────────────────────
+function exportSlides() {
+  const btn = document.getElementById('exportBtn');
+  btn.textContent = '⏳ Building…';
+  btn.disabled = true;
+  const a = document.createElement('a');
+  a.href = '/cri-daily-tf/export-slides';
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => { btn.textContent = '📊 Export to Slides'; btn.disabled = false; }, 3000);
+}
+
+// ── Reset a field to the Excel value ──────────────────────────────────────────
+function resetField(row_id, field, btn) {
+  if (!confirm('Clear the manual override and show Excel data for this cell?')) return;
+  fetch('/cri-daily-tf/reset-field', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ row_id, field }),
+  })
+  .then(r => r.json())
+  .then(d => { if (d.ok) location.reload(); })
+  .catch(() => alert('Reset failed'));
+}
+
+// ── Force-refresh Excel from SharePoint ──────────────────────────────────────
+function forceRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  btn.textContent = '⏳ Fetching…';
+  btn.disabled = true;
+  fetch('/cri-daily-tf/force-refresh', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        btn.textContent = '✓ Done — reloading…';
+        setTimeout(() => location.reload(), 600);
+      } else {
+        btn.textContent = '⚠ Error — retry';
+        btn.disabled = false;
+        alert('Refresh failed: ' + (d.error || 'unknown'));
+      }
+    })
+    .catch(() => {
+      btn.textContent = '⚠ Error — retry';
+      btn.disabled = false;
+    });
+}
+
+// ── Save on edit (debounced 600 ms) ───────────────────────────────────────────
+document.querySelectorAll('.ecell').forEach(el => {
+  el.addEventListener('input', () => {
+    el.classList.add('saving');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => saveCell(el), 600);
+  });
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
+  });
+});
+
+function saveCell(el) {
+  const row_id = el.dataset.row;
+  const field  = el.dataset.field;
+  const value  = el.innerText.trim();
+  fetch('/cri-daily-tf/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ row_id, field, value }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    el.classList.remove('saving');
+    if (data.ok) {
+      el.classList.add('saved');
+      setTimeout(() => el.classList.remove('saved'), 1500);
+    } else {
+      el.style.outline = '2px solid red';
+      setTimeout(() => el.style.outline = '', 2000);
+    }
+  })
+  .catch(() => {
+    el.classList.remove('saving');
+    el.style.outline = '2px solid red';
+    setTimeout(() => el.style.outline = '', 2000);
+  });
+}
+
+// ── 30-second poll — update cells changed by other users ──────────────────────
+function pollUpdates() {
+  fetch('/cri-daily-tf/api/data')
+    .then(r => r.json())
+    .then(edits => {
+      const now = new Date().toLocaleTimeString();
+      document.getElementById('lastPoll').textContent = 'Last sync: ' + now;
+
+      document.querySelectorAll('.ecell').forEach(el => {
+        if (document.activeElement === el) return; // never override active cell
+        const edit = edits[el.dataset.row];
+        if (!edit) return;
+        const serverVal = (edit[el.dataset.field] || '').trim();
+        const localVal  = el.innerText.trim();
+        if (serverVal !== '' && serverVal !== localVal) {
+          el.innerText = serverVal;
+          el.classList.add('synced');
+          setTimeout(() => el.classList.remove('synced'), 1500);
+        }
+      });
+    })
+    .catch(() => {});
+}
+
+setInterval(pollUpdates, 30000);
+setTimeout(pollUpdates, 2000);
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+Flask
+openpyxl
+requests
+requests-kerberos
+urllib3
+python-pptx
