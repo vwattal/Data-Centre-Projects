@@ -112,19 +112,19 @@ data_centre_landing/
 
 ## Tools
 
-| URL | Blueprint | Description |
-|-----|-----------|-------------|
-| `/` | `index` | Landing page — card grid linking to all tools |
-| `/jgs-soc-updates` | `jgs_soc` | JGS SOC driver schedule — reads `JGS_SOC_Trend.xlsx` from SharePoint, shows task/UAL tracking with trend graphs |
-| `/jgs-upstreaming` | `jgs_upstream` | JGS upstream patch plan — fetches Jira filter 452639, cumulative WW graph |
-| `/jgs-bug-triage` | `jgs_bug_triage` | JGS emulation bug triage — HSD query, component routing, arch-escalation email |
-| `/jgs-emu-bugs` | `jgs_emu_bugs` | JGS emulation bugs dashboard — HSD query 14027480453, Teams DM @mention notifications |
-| `/jgs-4plus2` | `jgs_4plus2` | JGS 4+2 tracking — SharePoint Excel (Rodrigo's OneDrive), HSD title lookup, shared SQLite edits |
-| `/cri-e2e` | `cri_e2e` | CRI E2E plan — Excel (weekly_updates / GT_DCN / KMD tabs) + PPTX (XPUM/Sysman) |
-| `/cri-ccb` | `cri_ccb` | CRI CCB strawman tracker — HSD query 13013902803, AR child sign-off status |
-| `/cri-daily-tf` | `cri_daily_tf` | CRI Daily TF pending features — SharePoint Excel, editable table, PowerPoint export |
-| `/backlog-orchestrator` | `backlog` | Jira backlog ranking — rule-based P1–P4 bucketing, agile board re-rank |
-| `/hsd2jira` | `hsd2jira` | HSD→Jira automation UI — loaded from `../HSD2Jira2HSD/` |
+| URL | Blueprint | Description | Data sources |
+|-----|-----------|-------------|--------------|
+| `/` | `index` | Landing page — card grid linking to all tools | None — static render |
+| `/jgs-soc-updates` | `jgs_soc` | JGS SOC RTL Freeze schedule. Cumulative WW trend graphs (Code Complete / Coral / Palladium), long-pole table, pending tasks, per-category drill-down, UAL schedule. Editable task comments shared across users. | **Excel:** `soc_automation/JGS_SOC_Trend.xlsx` (auto-downloaded from SharePoint, sheets `RTLFreeze` + `UAL_TI_SCHEDULE`). **SQLite:** `soc_automation/soc_edits.db` for comments/UAL edits. **Jira REST API:** blocked-by links for PSOC/Boot categories. |
+| `/jgs-upstreaming` | `jgs_upstream` | JGS upstream kernel patch plan. Issue table with target WW, cumulative WW trend graph, pending issues (target WW passed but still open), per-issue editable comments. | **Jira REST API:** filter `452639`, custom field `customfield_34504` for target WW. Token: `config.JIRA_TOKEN_PATH`. Comments saved to `user_data.json`. |
+| `/jgs-bug-triage` | `jgs_bug_triage` | JGS hardware/emulation bug triage. Bugs grouped by component (XeSim, KMD, IGC, PISA, Test, Compute Dev), days-open counter, component ownership history trail. Flags bugs open > 14 days without root cause. "Notify Arch" button sends escalation email via `smtpmail.intel.com`. | **HSD query:** `14026739770` (tenant `ip_hw_graphics`, subject `bugeco`). Enrichment via HSD ESService `get_record_by_id` + history API per article. Kerberos auth. |
+| `/jgs-emu-bugs` | `jgs_emu_bugs` | JGS emulation-specific bug dashboard. Bugs with priority grouping, component ownership trail, per-bug comments. Supports Teams @mention DM notifications — user types `@username`, server POSTs to a Power Automate HTTP trigger which sends a native 1-on-1 Teams DM. | **HSD query:** `14027480453`. Kerberos auth. Teams webhook URL stored in `routes/webhook_config.json` (set once via the UI). |
+| `/jgs-4plus2` | `jgs_4plus2` | JGS 4+2 tracking dashboard. HSD + Jira rows per owner (Rodrigo→xeKMD, Erez→UALkmd, Mrozek→UMD-L0, Santosh→Sysman). Editable ETA and Comments persisted in SQLite, shared across users with 60-second polling. | **Excel:** Rodrigo Vivi's personal OneDrive (SharePoint), downloaded via Microsoft Graph API. **HSD REST API** (Kerberos) for title lookup. **SQLite:** `../JGS_4+2/jgs4plus2.db`. |
+| `/cri-e2e` | `cri_e2e` | CRI E2E plan. Two tables: (1) CRI HSD features with linked Jira chips and BMG support flag, (2) XPUM/Sysman features with status, dependencies, ETAs, remarks. Per-row editable comments. | **Excel:** `config.CRI_EXCEL` (`CRI Pre-Map Day.xlsx`) — sheets `weekly_updates` (rows 1–46), `GT_DCN`, `KMD` (cols H–L for Jira cross-ref). **PPTX:** `config.CRI_PPTX` (`CRI_XPUM_E2E_FEATURE_REVIEW.pptx`) slides 1–5 for XPUM/Sysman (downloaded from SharePoint via Graph API). Comments in `config.E2E_COMMENTS` (`e2e_comments.json`). |
+| `/cri-ccb` | `cri_ccb` | CRI CCB strawman HSD tracker. Shows per-component AR sign-off status (XeKMD, Sysman, XPUM, E2E) for each strawman feature. Stale indicator if cache > 30 min old. | **HSD query:** `13013902803` (tenant `server_platf`, subject `feature`). AR children fetched via HSD ESService `get_related_records`, sign-off status via HSD REST per AR. Kerberos auth. Results cached in **SQLite:** `cri_ccb.db`. |
+| `/cri-daily-tf` | `cri_daily_tf` | CRI Daily TF pending driver features. Two editable tables (XPUM/Sysman and XeKMD). All columns (Feature, Priority, TF Meeting Minutes, ETA, Blocker) editable inline and persisted server-side. 30-second polling for multi-user sync. PowerPoint export (`/export-slides`). | **Excel:** SharePoint "Pending Driver Features enabling.xlsx" (Crescent Island site), sheets `Xpum_Sysman` and `XeKMD_pending`. Downloaded via Microsoft Graph API, cached in `/tmp/`. Edits in **SQLite:** `cri_daily_tf.db`. |
+| `/backlog-orchestrator` | `backlog` | Jira backlog manager. Fetches issues by scope (My Backlog / Entire Project / Board / custom JQL), applies text-based rules to bucket into P1–P4, optionally re-ranks issues on the Jira agile board. | **Jira REST API:** project VLK. Token: `config.BACKLOG_TOKEN_PATH` (`../HSD2Jira2HSD/.jira_token`). |
+| `/hsd2jira` | `hsd2jira` | HSD→Jira automation. Converts Intel HSD `dg_soc.feature` articles into a 9-issue Jira hierarchy (Epic → Code Complete parent/child stories → Sim/Emu stories → Upstream task/story). Three flows: bulk HSD query, single HSD link, or manual entry. Writes Jira key back to HSD AR child. Includes a background cron. | Loaded dynamically from `../HSD2Jira2HSD/`. **HSD REST + ESService** (Kerberos). **Jira REST API**, token at `config.HSD2JIRA_TOKEN_PATH`. |
 
 External links on the landing page (separate services, not in this repo):
 - `http://<host>:5050` — CRI Weekly Updates
