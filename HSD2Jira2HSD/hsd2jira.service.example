@@ -1,0 +1,14 @@
+[Unit]
+Description=HSD2Jira2HSD Flask App (port 8889)
+After=network.target
+
+[Service]
+WorkingDirectory=/home/YOUR_USERNAME/path/to/HSD2Jira2HSD
+ExecStart=/usr/bin/python3 app.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/tmp/hsd2jira.log
+StandardError=append:/tmp/hsd2jira.log
+
+[Install]
+WantedBy=default.target

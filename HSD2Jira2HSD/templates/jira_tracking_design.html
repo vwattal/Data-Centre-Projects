@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jira Tracking Design – Intel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Nunito',-apple-system,sans-serif;
+  background:linear-gradient(160deg,#060c18 0%,#091525 60%,#060e1c 100%);
+  min-height:100vh;color:#fff;font-weight:700;
+}
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(3,6,16,.95);backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.1);
+  padding:10px 24px;display:flex;align-items:center;gap:14px;
+}
+.back{text-decoration:none;color:#fff;font-size:.7rem;
+  padding:4px 11px;border:1px solid rgba(255,255,255,.28);border-radius:6px;transition:all .2s}
+.back:hover{background:rgba(255,255,255,.1)}
+.ttl{font-size:.95rem;font-weight:900}
+.ttl span{font-size:.58rem;color:rgba(255,255,255,.5);font-weight:600;display:block;margin-top:1px}
+.page{padding:72px 28px 40px;max-width:1340px;margin:0 auto}
+.cols{display:grid;grid-template-columns:1fr 280px;gap:24px;align-items:start}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+.panel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:20px 22px}
+.panel-hd{font-size:.7rem;text-transform:uppercase;letter-spacing:.7px;color:rgba(255,255,255,.4);
+  margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.panel-hd::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+
+/* Initiative */
+.e-initiative{background:linear-gradient(135deg,rgba(0,100,180,.28),rgba(0,50,100,.12));
+  border:1.5px solid #1e88e5;border-radius:12px;padding:11px 16px;
+  display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.e-initiative .ico{font-size:1.1rem}
+.e-initiative .name{font-size:.76rem;font-weight:900}
+.e-initiative .sub{font-size:.53rem;color:rgba(255,255,255,.42);margin-top:1px}
+
+/* Epic */
+.e-epic{background:linear-gradient(135deg,rgba(123,31,162,.25),rgba(74,0,120,.1));
+  border:1.5px solid #9c27b0;border-radius:12px;padding:11px 16px;
+  display:flex;align-items:center;gap:10px;}
+.e-epic .ico{font-size:1.1rem}
+.e-epic .name{font-size:.76rem;font-weight:900}
+.e-epic .sub{font-size:.53rem;color:rgba(255,255,255,.42);margin-top:1px}
+
+/* tree connector */
+.tree-vert{width:1px;background:rgba(255,255,255,.1)}
+.tree-horiz{height:1px;width:14px;background:rgba(255,255,255,.1);flex-shrink:0;align-self:flex-start;margin-top:18px}
+.story-row{display:flex;gap:0;margin-top:6px}
+.story-wrap{flex:1}
+
+.s-story{border-radius:10px;padding:9px 13px;display:flex;align-items:center;gap:9px}
+.s-story.cc {background:linear-gradient(135deg,rgba(46,125,50,.22),rgba(20,60,22,.15));border:1.5px solid #4caf50}
+.s-story.sim{background:linear-gradient(135deg,rgba(245,124,0,.22),rgba(100,50,0,.15));border:1.5px solid #ff9800}
+.s-story.emu{background:linear-gradient(135deg,rgba(198,40,40,.22),rgba(80,10,10,.15));border:1.5px solid #f44336}
+.s-story.tsk{background:linear-gradient(135deg,rgba(55,71,79,.28),rgba(20,30,35,.18));border:1.5px solid #546e7a}
+.s-story .ico{font-size:.9rem}
+.s-story .name{font-size:.68rem;font-weight:900;flex:1}
+.s-story .blk{font-size:.47rem;color:rgba(255,255,255,.3);white-space:nowrap}
+
+.sub-list{display:flex;flex-direction:column;gap:5px;margin:6px 0 0 20px}
+.sub-item{display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  border-radius:7px;padding:5px 10px;}
+.sub-item .stag{font-size:.48rem;color:rgba(0,199,183,.6);background:rgba(0,199,183,.1);border:1px solid rgba(0,199,183,.2);border-radius:4px;padding:1px 5px;white-space:nowrap;flex-shrink:0}
+.sub-item .eng{font-size:.57rem;color:rgba(255,255,255,.55);min-width:46px}
+.sub-item .est{font-size:.57rem;color:#80deea;min-width:34px}
+.sub-item .psd{font-size:.53rem;color:rgba(255,255,255,.32)}
+
+/* RIGHT: trend */
+.trend-col{display:flex;flex-direction:column;gap:14px}
+.t-card{border-radius:12px;padding:13px 15px}
+.t-card.cc {background:linear-gradient(135deg,rgba(46,125,50,.15),rgba(10,30,12,.1));border:1.5px solid #4caf50}
+.t-card.sim{background:linear-gradient(135deg,rgba(245,124,0,.15),rgba(50,24,0,.1));border:1.5px solid #ff9800}
+.t-card.emu{background:linear-gradient(135deg,rgba(198,40,40,.15),rgba(50,5,5,.1));border:1.5px solid #f44336}
+.t-hd{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.t-hd .ico{font-size:.95rem}
+.t-hd .name{font-size:.7rem;font-weight:900;flex:1}
+.t-hd .ww{font-size:.88rem;font-weight:900;padding:4px 12px;border-radius:7px;white-space:nowrap}
+.ww-g{background:rgba(46,125,50,.4);color:#a5d6a7;border:1px solid #4caf50}
+.ww-o{background:rgba(245,124,0,.4);color:#ffcc80;border:1px solid #ff9800}
+.ww-r{background:rgba(198,40,40,.4);color:#ef9a9a;border:1px solid #f44336}
+.t-rows{display:flex;flex-direction:column;gap:4px;margin-bottom:9px}
+.t-row{display:flex;align-items:center;gap:8px;
+  background:rgba(0,0,0,.2);border-radius:7px;padding:5px 10px;font-size:.58rem;}
+.t-row .eng{color:rgba(255,255,255,.5);min-width:46px}
+.t-row .calc{flex:1;color:rgba(255,255,255,.38);font-size:.53rem}
+.t-row .res{font-weight:900;white-space:nowrap}
+.res-g{color:#a5d6a7}.res-o{color:#ffcc80}.res-r{color:#ef9a9a}
+.formula{display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.05);border-radius:7px;padding:5px 10px;
+  font-size:.58rem;border-left:2px solid rgba(255,255,255,.12);}
+.formula .lbl{color:rgba(255,255,255,.38);font-size:.54rem;min-width:78px}
+.formula .val{color:#80cbc4;font-weight:900}
+.blk-arrow{display:flex;align-items:center;gap:8px;font-size:.56rem;
+  color:rgba(255,255,255,.28);padding:2px 4px;}
+.blk-arrow span{flex:1;height:1px;background:rgba(255,255,255,.08)}
+.info-box{background:rgba(0,113,197,.08);border:1px solid rgba(0,113,197,.22);
+  border-radius:10px;padding:12px 14px;font-size:.6rem;color:rgba(255,255,255,.48);}
+.info-box strong{color:#90caf9}
+.cmd{font-family:monospace;background:#0a0f1e;border:1px solid rgba(0,199,183,.2);
+  border-radius:6px;padding:4px 10px;color:#80cbc4;font-size:.6rem;display:inline-block;margin-top:5px}
+
+/* Child stories */
+.child-story{border-radius:9px;padding:8px 12px;display:flex;align-items:center;gap:8px;margin-bottom:0}
+.child-story.ph1{background:linear-gradient(135deg,rgba(2,136,209,.18),rgba(1,60,100,.1));border:1.5px solid #0288d1}
+.child-story.ph2{background:linear-gradient(135deg,rgba(0,150,136,.18),rgba(0,60,55,.1));border:1.5px solid #00897b}
+.child-tag{font-size:.45rem;font-weight:900;letter-spacing:.5px;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.child-tag.ph1{background:rgba(2,136,209,.25);color:#4fc3f7;border:1px solid rgba(2,136,209,.4)}
+.child-tag.ph2{background:rgba(0,150,136,.25);color:#80cbc4;border:1px solid rgba(0,150,136,.4)}
+.child-story.igt{background:linear-gradient(135deg,rgba(245,124,0,.18),rgba(100,50,0,.1));border:1.5px solid #f57c00}
+.child-tag.igt{background:rgba(245,124,0,.25);color:#ffcc80;border:1px solid rgba(245,124,0,.4)}
+.child-story.ups{background:linear-gradient(135deg,rgba(123,31,162,.18),rgba(50,10,70,.1));border:1.5px solid #7b1fa2}
+.child-tag.ups{background:rgba(123,31,162,.25);color:#ce93d8;border:1px solid rgba(123,31,162,.4)}
+.child-list{display:flex;flex-direction:column;gap:4px;margin:5px 0 0 18px}
+
+/* Notes panel */
+.notes-panel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:18px 16px;display:flex;flex-direction:column;gap:10px;position:sticky;top:72px}
+.notes-panel .panel-hd{margin-bottom:0}
+#notesArea{width:100%;flex:1;min-height:420px;resize:none;
+  background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:10px;
+  color:rgba(255,255,255,.85);font-family:'Nunito',sans-serif;font-size:.65rem;font-weight:600;
+  padding:12px;outline:none;line-height:1.6;}
+#notesArea::placeholder{color:rgba(255,255,255,.22)}
+#notesArea:focus{border-color:rgba(99,179,237,.4)}
+.notes-clear{font-size:.6rem;padding:5px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.05);color:rgba(255,255,255,.4);cursor:pointer;align-self:flex-end;transition:.2s}
+.notes-clear:hover{background:rgba(255,100,100,.15);color:#ef9a9a;border-color:rgba(239,154,154,.3)}
+.notes-saved{font-size:.55rem;color:rgba(100,200,150,.5);text-align:right;min-height:14px}
+/* Editable names */
+[data-ekey]{outline:none;border-radius:4px;cursor:text;transition:background .15s;min-width:20px;display:inline-block}
+[data-ekey]:hover{background:rgba(255,255,255,.07)}
+[data-ekey]:focus{background:rgba(255,255,255,.11);box-shadow:0 0 0 1.5px rgba(99,179,237,.45)}
+.edit-hint{font-size:.42rem;color:rgba(255,255,255,.18);margin-left:6px;letter-spacing:.2px;font-weight:600;user-select:none;transition:opacity .2s;opacity:0}
+.panel:hover .edit-hint{opacity:1}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/" class="back">← Home</a>
+  <div class="ttl">Jira Tracking Design
+    <span>Epic → Story → Subtask trend date calculation</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="cols">
+
+    <!-- LEFT: Epic hierarchy -->
+    <div class="panel">
+      <div class="panel-hd">📦 Epic Structure <span class="edit-hint">✏ click name to edit</span></div>
+
+      <!-- Initiative -->
+      <div class="e-initiative">
+        <div class="ico">🎯</div>
+        <div>
+          <div class="name" contenteditable="true" data-ekey="initiative">Initiative</div>
+          <div class="sub">Top-level goal · encompasses one or more epics</div>
+        </div>
+      </div>
+
+      <!-- Initiative → Epic connector -->
+      <div style="display:flex;flex-direction:column;align-items:flex-start;margin-left:28px">
+        <div class="tree-vert" style="height:12px"></div>
+      </div>
+
+      <!-- Epic -->
+      <div style="margin-left:14px">
+        <div class="e-epic">
+          <div class="ico">📦</div>
+          <div>
+            <div class="name" contenteditable="true" data-ekey="epic">Epic · HSD Feature</div>
+            <div class="sub">Created by hsd2jira · child of Initiative</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Story 1: [Parent][Story] Code Complete -->
+      <div class="story-row">
+        <div style="display:flex;flex-direction:column;align-items:center;margin-left:46px">
+          <div class="tree-vert" style="height:100%;min-height:12px"></div>
+        </div>
+        <div class="tree-horiz"></div>
+        <div class="story-wrap">
+          <div class="s-story cc">
+            <div class="ico">📗</div>
+            <div class="name" contenteditable="true" data-ekey="story-cc">[Parent][Story] Code Complete</div>
+            <div class="blk">→ Blocks Story 2</div>
+          </div>
+
+          <!-- Child Phase 1 -->
+          <div class="child-list">
+            <div style="display:flex;align-items:flex-start;gap:0;margin-top:5px">
+              <div style="display:flex;flex-direction:column;align-items:center;margin-left:8px">
+                <div class="tree-vert" style="height:100%;min-height:12px"></div>
+              </div>
+              <div class="tree-horiz" style="margin-top:14px"></div>
+              <div style="flex:1">
+                <div class="child-story ph1">
+                  <span class="child-tag ph1">[Child][Code Complete][Part-1]</span>
+                  <span style="font-size:.65rem;font-weight:900;flex:1" contenteditable="true" data-ekey="child-ph1">Part-1 Implementation</span>
+                </div>
+                <div class="sub-list">
+                  <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng A</span><span class="est">80 h</span><span class="psd">Start: 2026-08-12</span></div>
+                  <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng B</span><span class="est">40 h</span><span class="psd">Start: 2026-08-12</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Child Phase 2 -->
+            <div style="display:flex;align-items:flex-start;gap:0;margin-top:6px">
+              <div style="display:flex;flex-direction:column;align-items:center;margin-left:8px">
+                <div class="tree-vert" style="height:100%;min-height:12px"></div>
+              </div>
+              <div class="tree-horiz" style="margin-top:14px"></div>
+              <div style="flex:1">
+                <div class="child-story ph2">
+                  <span class="child-tag ph2">[Child][Code Complete][Part-2]</span>
+                  <span style="font-size:.65rem;font-weight:900;flex:1" contenteditable="true" data-ekey="child-ph2">Part-2 Implementation</span>
+                </div>
+                <div class="sub-list">
+                  <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng A</span><span class="est">60 h</span><span class="psd">Start: after Part-1</span></div>
+                  <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng C</span><span class="est">40 h</span><span class="psd">Start: after Part-1</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Child IGT Test -->
+            <div style="display:flex;align-items:flex-start;gap:0;margin-top:6px">
+              <div style="display:flex;flex-direction:column;align-items:center;margin-left:8px">
+                <div class="tree-vert" style="height:100%;min-height:12px"></div>
+              </div>
+              <div class="tree-horiz" style="margin-top:14px"></div>
+              <div style="flex:1">
+                <div class="child-story igt">
+                  <span class="child-tag igt">[Child][IGT][Test]</span>
+                  <span style="font-size:.65rem;font-weight:900;flex:1" contenteditable="true" data-ekey="child-igt">IGT story</span>
+                </div>
+                <div class="sub-list">
+                  <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng A</span><span class="est">30 h</span><span class="psd">Start: after Part-2</span></div>
+                  <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng B</span><span class="est">20 h</span><span class="psd">Start: after Part-2</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Story 2 -->
+      <div class="story-row" style="margin-top:6px">
+        <div style="display:flex;flex-direction:column;align-items:center;margin-left:46px">
+          <div class="tree-vert" style="height:100%;min-height:12px"></div>
+        </div>
+        <div class="tree-horiz"></div>
+        <div class="story-wrap">
+          <div class="s-story sim">
+            <div class="ico">📙</div>
+            <div class="name" contenteditable="true" data-ekey="story-sim">Story 2 · Sim / Coral Testing</div>
+            <div class="blk">→ Blocks Story 3</div>
+          </div>
+          <div class="sub-list">
+            <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng A</span><span class="est">60 h</span><span class="psd">Start: after Story 1</span></div>
+            <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng B</span><span class="est">40 h</span><span class="psd">Start: after Story 1</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Story 3 -->
+      <div class="story-row" style="margin-top:6px">
+        <div style="display:flex;flex-direction:column;align-items:center;margin-left:46px">
+          <div class="tree-vert" style="height:100%;min-height:12px"></div>
+        </div>
+        <div class="tree-horiz"></div>
+        <div class="story-wrap">
+          <div class="s-story emu">
+            <div class="ico">📕</div>
+            <div class="name" contenteditable="true" data-ekey="story-emu">Story 3 · Palladium / Emu Testing</div>
+          </div>
+          <div class="sub-list">
+            <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng A</span><span class="est">40 h</span><span class="psd">Start: after Story 2</span></div>
+            <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng B</span><span class="est">20 h</span><span class="psd">Start: after Story 2</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Task -->
+      <div class="story-row" style="margin-top:6px">
+        <div style="display:flex;flex-direction:column;align-items:center;margin-left:46px">
+          <div class="tree-vert" style="height:18px"></div>
+        </div>
+        <div class="tree-horiz"></div>
+        <div class="story-wrap">
+          <div class="s-story tsk">
+            <div class="ico">📋</div>
+            <div class="name" contenteditable="true" data-ekey="task">Task · Upstream Feature Task</div>
+            <div class="blk" style="color:rgba(255,255,255,.2)">no estimate</div>
+          </div>
+
+          <!-- Child Upstream -->
+          <div class="child-list">
+            <div style="display:flex;align-items:flex-start;gap:0;margin-top:5px">
+              <div style="display:flex;flex-direction:column;align-items:center;margin-left:8px">
+                <div class="tree-vert" style="height:100%;min-height:12px"></div>
+              </div>
+              <div class="tree-horiz" style="margin-top:14px"></div>
+              <div style="flex:1">
+                <div class="child-story ups">
+                  <span class="child-tag ups">[Child][Upstream]</span>
+                  <span style="font-size:.65rem;font-weight:900;flex:1" contenteditable="true" data-ekey="child-ups">Upstream Implementation</span>
+                </div>
+                <div class="sub-list">
+                  <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng A</span><span class="est">40 h</span><span class="psd">Start: after Code Complete</span></div>
+                  <div class="sub-item"><span class="stag">↳ Subtask</span><span class="eng">👤 Eng B</span><span class="est">20 h</span><span class="psd">Start: after Code Complete</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+
+
+    <!-- NOTES panel (3rd column) -->
+    <div class="notes-panel panel">
+      <div class="panel-hd">📝 Notes</div>
+      <textarea id="notesArea" placeholder="Type your notes here…&#10;&#10;Supports plain text — autosaved to browser storage."></textarea>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+        <span class="notes-saved" id="notesSaved"></span>
+        <button class="notes-clear" onclick="clearNotes()">🗑 Clear</button>
+      </div>
+    </div><!-- /notes -->
+
+  </div>
+</div>
+
+<script>
+(function () {
+  var API = '/api/jira-tracking-notes';
+  var ta = document.getElementById('notesArea');
+  var savedEl = document.getElementById('notesSaved');
+
+  /* ── helpers ── */
+  function showSaved(msg) {
+    savedEl.textContent = msg;
+    setTimeout(function () { savedEl.textContent = ''; }, 1800);
+  }
+
+  function postToServer(payload) {
+    fetch(API, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    }).catch(function(){});
+  }
+
+  /* ── Load everything from server on page open ── */
+  fetch(API)
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (ta && data.notes !== undefined) ta.value = data.notes;
+      /* restore editable names */
+      document.querySelectorAll('[data-ekey]').forEach(function (el) {
+        var v = data.names && data.names[el.dataset.ekey];
+        if (v) el.textContent = v;
+      });
+    })
+    .catch(function () {
+      /* server unreachable — fall back to localStorage */
+      if (ta) ta.value = localStorage.getItem('jira_design_notes') || '';
+      document.querySelectorAll('[data-ekey]').forEach(function (el) {
+        var v = localStorage.getItem('jira_ename_' + el.dataset.ekey);
+        if (v) el.textContent = v;
+      });
+    });
+
+  /* ── Notes textarea: autosave to server ── */
+  if (ta) {
+    var saveTimer;
+    ta.addEventListener('input', function () {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () {
+        postToServer({notes: ta.value});
+        showSaved('✓ Saved');
+      }, 600);
+    });
+  }
+
+  window.clearNotes = function () {
+    if (ta) ta.value = '';
+    postToServer({notes: ''});
+    showSaved('Cleared');
+  };
+
+  /* ── Editable story names: save to server ── */
+  document.querySelectorAll('[data-ekey]').forEach(function (el) {
+    el.addEventListener('blur', function () {
+      var val = el.textContent.trim();
+      if (!val) return;
+      var payload = {names: {}};
+      payload.names[el.dataset.ekey] = val;
+      postToServer(payload);
+    });
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') { el.blur(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

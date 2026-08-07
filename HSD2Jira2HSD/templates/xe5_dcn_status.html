@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xe5 DCN Enabling Status — EXI SW E2E Plan</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- DataTables + Bootstrap 5 -->
+    <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        :root { --intel-blue: #0071c5; --intel-dark: #003c71; --intel-orange: #ff6b35; }
+        body { font-family: 'Intel Clear', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+               background: #f0f4f8; font-size: 0.82rem; }
+        /* ── Page header ────────────────────────────────────────────── */
+        .page-header {
+            background: linear-gradient(135deg, #003c71 0%, #0055a2 100%);
+            color: white; padding: 10px 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            display: flex; align-items: center; gap: 14px;
+        }
+        .page-header .intel-mark { font-size: 1.1rem; font-weight: 800; border: 2px solid white;
+            padding: 1px 7px; border-radius: 4px; }
+        .page-header h1 { font-size: 1.05rem; font-weight: 700; margin: 0; }
+        .page-header .subtitle { font-size: 0.7rem; color: rgba(255,255,255,0.75); margin-left: auto; }
+        /* ── Info bar ───────────────────────────────────────────────── */
+        .info-bar { background: white; border-bottom: 2px solid #d0e4f7;
+            padding: 6px 20px; display: flex; align-items: center; gap: 20px;
+            flex-wrap: wrap; }
+        .info-pill { background: #f0f7ff; border: 1px solid #bdd8f5; border-radius: 20px;
+            padding: 3px 10px; font-size: 0.72rem; color: #003c71; font-weight: 500; }
+        .info-pill a { color: var(--intel-blue); text-decoration: none; font-weight: 700; }
+        .info-pill a:hover { text-decoration: underline; }
+        /* ── Summary cards ──────────────────────────────────────────── */
+        .summary-row { padding: 10px 20px; display: flex; gap: 10px; flex-wrap: wrap;
+            align-items: center; }
+        .sum-card { background: white; border: 1px solid #dde6f0; border-radius: 8px;
+            padding: 6px 14px; text-align: center; min-width: 90px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .sum-card .val { font-size: 1.4rem; font-weight: 800; color: var(--intel-dark); }
+        .sum-card .lbl { font-size: 0.62rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .dl-btn { margin-left: auto; }
+        /* ── Legend ─────────────────────────────────────────────────── */
+        .legend { padding: 0 20px 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .legend-label { font-size: 0.68rem; color: #555; font-weight: 600; margin-right: 4px; }
+        /* ── Table wrapper ──────────────────────────────────────────── */
+        .table-wrapper { padding: 0 12px 20px; overflow-x: auto; }
+        #dcn-table { font-size: 0.75rem; table-layout: fixed; min-width: 2320px; }
+        .mf-cell {
+            cursor: text; outline: none; white-space: normal; word-break: break-word;
+            font-size: 0.7rem; color: #333; padding: 3px 5px;
+        }
+        .mf-cell:focus { background: #fffde7; border-radius: 3px; box-shadow: inset 0 0 0 1px #f9a825; }
+        .mf-cell:empty::before { content: '—'; color: #bbb; pointer-events: none; }
+        #dcn-table thead th {
+            background: #1565c0; color: white;
+            font-size: 0.68rem; padding: 5px 5px 4px;
+            white-space: nowrap; font-weight: 600;
+            border-right: 1px solid #1976d2;
+            vertical-align: bottom; overflow: hidden;
+        }
+        /* filter inputs inside header */
+        #dcn-table thead th .col-filter {
+            display: block; margin-top: 3px; width: 100%;
+            font-size: 0.65rem; padding: 2px 4px; border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.15);
+            color: white; outline: none; font-weight: 400; box-sizing: border-box;
+        }
+        #dcn-table thead th .col-filter::placeholder { color: rgba(255,255,255,0.55); }
+        #dcn-table thead th .col-filter:focus { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.7); }
+        #dcn-table thead th select.col-filter option { background: #1565c0; color: white; }
+        #dcn-table tbody td { padding: 4px 6px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #dcn-table tbody td.title-cell { white-space: normal; }
+        #dcn-table tbody tr:nth-child(even) { background: #f8fbff; }
+        #dcn-table tbody tr:hover { background: #e8f4ff !important; }
+        /* ── Status badges ──────────────────────────────────────────── */
+        .badge-done    { background:#d4edda; color:#155724; border:1px solid #b8dfc5; }
+        .badge-closed  { background:#d4edda; color:#155724; border:1px solid #b8dfc5; }
+        .badge-inprog  { background:#cce5ff; color:#004085; border:1px solid #b3d7ff; }
+        .badge-pending { background:#fff3cd; color:#856404; border:1px solid #ffeaa0; }
+        .badge-blank   { background:#f3f3f3; color:#aaa;    border:1px solid #e0e0e0; }
+        .badge-yes     { background:#d4edda; color:#155724; border:1px solid #b8dfc5; }
+        .badge-no      { background:#f3f3f3; color:#888;    border:1px solid #e0e0e0; }
+        .badge-date    { background:#e8f4ff; color:#003c71; border:1px solid #b3d7ff; }
+        .badge-nodate  { background:#f9f9f9; color:#bbb;    border:1px solid #e8e8e8; }
+        .status-badge {
+            display: inline-block; padding: 1px 6px; border-radius: 10px;
+            font-size: 0.65rem; font-weight: 600; white-space: nowrap;
+        }
+        .jira-link { color: var(--intel-blue); text-decoration: none; font-weight: 600; font-size: 0.72rem; }
+        .jira-link:hover { text-decoration: underline; }
+        .hsd-link  { color: var(--intel-dark); text-decoration: none; font-weight: 700; }
+        .hsd-link:hover { text-decoration: underline; color: var(--intel-blue); }
+        .title-cell { white-space: normal !important; line-height: 1.3; word-break: break-word; }
+        .trend-val  { font-size: 0.7rem; color: #444; font-family: monospace; }
+        /* ── Loading overlay ────────────────────────────────────────── */
+        #loading-overlay {
+            position: fixed; inset: 0; background: rgba(0,30,70,0.6);
+            display: flex; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .loading-box {
+            background: white; border-radius: 12px; padding: 30px 40px;
+            text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .loading-box h3 { color: #003c71; margin-bottom: 8px; font-size: 1rem; }
+        .loading-box p  { color: #666; font-size: 0.8rem; }
+        .spinner-lg { width: 48px; height: 48px; border: 5px solid #d0e4f7;
+            border-top-color: var(--intel-blue); border-radius: 50%;
+            animation: spin 0.9s linear infinite; margin: 0 auto 14px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* ── Error banner ───────────────────────────────────────────── */
+        #error-banner { display: none; background: #fff0f0; border-left: 4px solid #c0392b;
+            padding: 12px 20px; color: #c0392b; font-size: 0.8rem; }
+        /* dataTables overrides */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter { font-size: 0.75rem; }
+        .dataTables_wrapper .dataTables_info { font-size: 0.7rem; color: #666; }
+        .dataTables_wrapper .dataTables_paginate .page-item .page-link { font-size: 0.75rem; }
+        table.dataTable { border-collapse: collapse !important; }
+        table.dataTable thead th { border-bottom: none !important; }
+        /* prevent DataTables from injecting its own scroll wrapper */
+        .dataTables_scrollHead, .dataTables_scrollBody { overflow: visible !important; }
+        /* ── Frozen first 3 columns ─────────────────────────────────── */
+        #dcn-table th:nth-child(1), #dcn-table td:nth-child(1) { position: sticky; left: 0;     z-index: 2; }
+        #dcn-table th:nth-child(2), #dcn-table td:nth-child(2) { position: sticky; left: 36px;  z-index: 2; }
+        #dcn-table th:nth-child(3), #dcn-table td:nth-child(3) { position: sticky; left: 146px; z-index: 2; box-shadow: 3px 0 5px -2px rgba(0,0,0,0.18); }
+        /* body sticky cells: match row stripe/hover colours */
+        #dcn-table tbody td:nth-child(1), #dcn-table tbody td:nth-child(2), #dcn-table tbody td:nth-child(3) { background: white; }
+        #dcn-table tbody tr:nth-child(even) td:nth-child(1),
+        #dcn-table tbody tr:nth-child(even) td:nth-child(2),
+        #dcn-table tbody tr:nth-child(even) td:nth-child(3) { background: #f8fbff; }
+        #dcn-table tbody tr:hover td:nth-child(1),
+        #dcn-table tbody tr:hover td:nth-child(2),
+        #dcn-table tbody tr:hover td:nth-child(3) { background: #e8f4ff !important; }
+        /* header sticky cells keep blue background, sit above body cells */
+        #dcn-table thead th:nth-child(1),
+        #dcn-table thead th:nth-child(2),
+        #dcn-table thead th:nth-child(3) { z-index: 5; background: #1565c0; }
+        /* ── Multi-select filter dropdown (Excel-style) ──────────────── */
+        .filter-wrap { position: relative; display: inline-block; margin-left: 3px; vertical-align: middle; }
+        .filter-btn {
+            background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3);
+            color: rgba(255,255,255,0.9); cursor: pointer; font-size: 0.58rem;
+            padding: 0 5px; border-radius: 3px; line-height: 1.7;
+        }
+        .filter-btn:hover { background: rgba(255,255,255,0.32); }
+        .filter-btn.active { background: #ffc107; color: #333; border-color: #e6ac00; font-weight: 700; }
+        .rtlsim-sel {
+            font-size: 0.72rem; padding: 1px 4px; border: 1px solid #bbb;
+            border-radius: 3px; background: #fff; cursor: pointer;
+        }
+        .filter-panel {
+            position: fixed; z-index: 99999;
+            background: white; border: 1px solid #b0c4de; border-radius: 6px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.22); min-width: 180px; max-width: 270px;
+            padding: 8px; color: #333; font-size: 0.72rem;
+        }
+        .filter-panel[hidden] { display: none; }
+        .fp-search {
+            width: 100%; box-sizing: border-box; border: 1px solid #ddd;
+            border-radius: 4px; padding: 4px 8px; font-size: 0.72rem;
+            margin-bottom: 5px; color: #333; outline: none;
+        }
+        .fp-actions { display: flex; gap: 5px; margin-bottom: 5px; }
+        .fp-actions button {
+            flex: 1; font-size: 0.67rem; padding: 2px 0; border: 1px solid #ccc;
+            border-radius: 3px; cursor: pointer; background: #f5f5f5; color: #333;
+        }
+        .fp-actions button:hover { background: #e0e0e0; }
+        .fp-list {
+            max-height: 200px; overflow-y: auto; border: 1px solid #e8e8e8;
+            border-radius: 4px; padding: 2px;
+        }
+        .fp-list label {
+            display: flex; align-items: center; gap: 6px; padding: 3px 5px;
+            font-size: 0.7rem; color: #333; cursor: pointer; border-radius: 3px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .fp-list label:hover { background: #e8f4ff; }
+        .fp-list label input { margin: 0; flex-shrink: 0; cursor: pointer; }
+        .fp-footer { margin-top: 6px; text-align: right; }
+        .fp-footer button {
+            background: #1565c0; color: white; border: none; border-radius: 4px;
+            padding: 4px 16px; font-size: 0.72rem; cursor: pointer; font-weight: 600;
+        }
+        .fp-footer button:hover { background: #0d47a1; }
+    </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+    <div class="loading-box">
+        <div class="spinner-lg"></div>
+        <h3 id="loading-title">Loading xe5 DCN Data</h3>
+        <p id="loading-msg">Checking cache…</p>
+    </div>
+</div>
+
+<!-- Page header -->
+<div class="page-header">
+    <div class="intel-mark">Intel®</div>
+    <div>
+        <h1>📊 EXI SW E2E Plan — xe5 DCN Enabling Status</h1>
+    </div>
+    <div class="subtitle">ip_hw_graphics_tenant · xe5 platform · DCN tracking</div>
+    <span id="cache-badge" style="display:none;margin-left:12px;font-size:0.72rem;color:rgba(255,255,255,0.75);"></span>
+    <a href="/" style="color:rgba(255,255,255,0.7);font-size:0.72rem;text-decoration:none;margin-left:10px;">
+        ← Dashboard
+    </a>
+</div>
+
+<!-- Error banner -->
+<div id="error-banner"></div>
+
+<!-- Info bar -->
+<div class="info-bar">
+    <span class="info-pill">HSD DCN Query: <a href="https://hsdes.intel.com/appstore/article-one/#/query/14028312865" target="_blank">14028312865</a></span>
+    <span class="info-pill">SW Impact Query: <a href="https://hsdes.intel.com/appstore/article-one/#/query/22023003945" target="_blank">22023003945</a></span>
+    <span class="info-pill" id="last-refresh">Loading…</span>
+</div>
+
+<!-- Summary + download button -->
+<div class="summary-row">
+    <div class="sum-card"><div class="val" id="cnt-total">–</div><div class="lbl">Total DCNs</div></div>
+    <div class="sum-card"><div class="val" id="cnt-compute">–</div><div class="lbl">Compute</div></div>
+    <div class="sum-card"><div class="val" id="cnt-kmd">–</div><div class="lbl">KMD</div></div>
+    <div class="sum-card"><div class="val" id="cnt-done">–</div><div class="lbl">Done</div></div>
+    <div class="sum-card"><div class="val" id="cnt-open">–</div><div class="lbl">Open</div></div>
+    <div class="dl-btn">
+        <button class="btn btn-sm" id="xl-btn"
+            style="background:#1a7340;color:white;border:none;padding:6px 16px;border-radius:6px;font-weight:600;"
+            onclick="downloadExcel()">
+            📥 Export Excel (JGS template)
+        </button>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+    <span class="legend-label">Legend:</span>
+    <span class="status-badge badge-done">Done</span>
+    <span class="status-badge badge-inprog">In Progress / In Analysis</span>
+    <span class="status-badge badge-pending">Pending scoping</span>
+    <span class="status-badge badge-blank">(blank)</span>
+    <span class="status-badge badge-yes">Yes</span>
+    <span class="status-badge badge-no">No</span>
+    <span class="status-badge badge-date">WW date</span>
+    <span class="status-badge badge-nodate">no date yet</span>
+</div>
+
+<!-- Table -->
+<div class="table-wrapper">
+<table id="dcn-table" class="table table-bordered table-sm w-100">
+<thead>
+    <!-- Single header row — DataTables must see only one row to map columns cleanly -->
+    <tr class="col-names">
+        <th data-col="0"  style="width:36px">#</th>
+        <th data-col="1"  style="width:110px">HSD ID</th>
+        <th data-col="2"  style="width:220px">Title</th>
+        <th data-col="3"  style="width:120px">Mega-Feature</th>
+        <th data-col="4"  style="width:90px;border-left:3px solid #0d3460">Sim Readiness</th>
+        <th data-col="5"  style="width:90px">Emu Readiness</th>
+        <th data-col="6"  style="width:86px">RTL Trend WW</th>
+        <th data-col="7"  style="width:90px">Study_Priority</th>
+        <th data-col="8"  style="width:74px;border-left:3px solid #0d3460">HSD Status</th>
+        <th data-col="9"  style="width:66px">HSD State</th>
+        <th data-col="10" style="width:60px;border-left:3px solid #0d3460">Compute Inv.</th>
+        <th data-col="11" style="width:56px">KMD Inv.</th>
+        <th data-col="12" style="width:110px;border-left:3px solid #0d3460">Dev Compute</th>
+        <th data-col="13" style="width:110px">Dev IGC</th>
+        <th data-col="14" style="width:110px">Dev XeKMD</th>
+        <th data-col="15" style="width:110px">Dev PISA</th>
+        <th data-col="16" style="width:110px">Dev GUC</th>
+        <th data-col="17" style="width:80px;border-left:3px solid #0d3460">Trend Compute</th>
+        <th data-col="18" style="width:76px">Trend IGC</th>
+        <th data-col="19" style="width:76px">Trend XeKMD</th>
+        <th data-col="20" style="width:76px">Trend PISA</th>
+        <th data-col="21" style="width:76px">Trend GUC</th>
+        <th data-col="22" style="width:100px;border-left:3px solid #0d3460">Test Dev</th>
+        <th data-col="23" style="width:76px">Test Trend</th>
+        <th data-col="24" style="width:80px">Impl Trend</th>
+        <th data-col="25" style="width:86px;border-left:3px solid #0d3460">Val-Simulation</th>
+        <th data-col="26" style="width:86px">Val-Emulation</th>
+        <th data-col="27" style="width:100px">Driver for RTLSim?</th>
+    </tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<!-- jQuery + Bootstrap + DataTables -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+const HSD_URL  = 'https://hsdes.intel.com/appstore/article-one/#/article/';
+const JIRA_URL = 'https://jira.devtools.intel.com/browse/';
+
+/* ── Mega-Feature static mapping ──────────────────────────────────── */
+const MF_MAP = {
+    '22017175474': 'Command streamer',
+    '16031066776': 'Copy Engine',
+    '16031066972': 'Copy Engine',
+    '22021737419': 'Copy Engine',
+    '16028951726': 'Copy Engine',
+    '16030114751': 'Copy Q improvements',
+    '14026566439': 'EU',
+    '14024932444': 'EU 2.0',
+    '14025675606': 'EU 2.0',
+    '22021719036': 'EU2.0',
+    '14027054460': 'EU2.0',
+    '18044179001': 'EU2.0',
+    '18044024581': 'EU2.0',
+    '14026877351': 'GPU Config',
+    '14027559069': 'Memory operations',
+    '22021595124': 'Memory operations',
+    '22022188545': 'Memory operations',
+    '22021716976': 'Memory operations',
+    '14027645810': 'Memory operations',
+    '22021643902': 'Memory operations',
+    '14027058854': 'Misc',
+    '16023190982': 'Misc',
+    '18043894141': 'Misc',
+    '14027790451': 'RAS',
+    '16025160413': 'RAS',
+    '14027226116': 'Observability & Reliability',
+    '14027743409': 'Observability & Reliability',
+    '14028048207': 'Observability & Reliability',
+    '22021468476': 'Observability & Reliability',
+    '14027447174': 'PM',
+    '14026023797': 'Partitioning',
+    '22020893691': 'Performance',
+    '16016242710': 'Scaling',
+    '14022979811': 'Scheduling',
+    '14027596955': 'Scheduling',
+    '14026123470': 'Scheduling',
+    '22021719062': 'Systolic',
+    '22021719025': 'Systolic',
+    '14027059053': 'Systolic',
+    '14025328943': 'Systolic',
+    '14027565470': 'Systolic',
+    '22021717003': 'Systolic',
+    '22021544669': 'Systolic',
+    '14027956139': 'Systolic',
+    '14026166644': 'Systolic',
+    '22021716643': 'Systolic',
+    '14026766650': 'Systolic',
+    '14026926340': 'Systolic',
+};
+/* Load any user-edits from localStorage (overrides static map) */
+let mfEdits = {};
+try { mfEdits = JSON.parse(localStorage.getItem('xe5_mf_edits') || '{}'); } catch(_) {}
+/* RTLSim driver enabled per HSD — yes/no dropdown, localStorage-persisted */
+let rtlSimEdits = {};
+try { rtlSimEdits = JSON.parse(localStorage.getItem('xe5_rtlsim') || '{}'); } catch(_) {}
+function getRtlSim(id) { return rtlSimEdits[String(id)] || ''; }
+function setRtlSim(id, val) {
+    rtlSimEdits[String(id)] = val;
+    try { localStorage.setItem('xe5_rtlsim', JSON.stringify(rtlSimEdits)); } catch(_) {}
+}
+function getMF(hsdId) {
+    const id = String(hsdId);
+    return (mfEdits[id] !== undefined) ? mfEdits[id] : (MF_MAP[id] || '');
+}
+function saveMF(hsdId, val) {
+    mfEdits[String(hsdId)] = val;
+    try { localStorage.setItem('xe5_mf_edits', JSON.stringify(mfEdits)); } catch(_) {}
+}
+
+/* ── Helpers ──────────────────────────────────────────────────────── */
+function badge(cls, text) {
+    return `<span class="status-badge ${cls}">${text}</span>`;
+}
+
+function renderHSD(id) {
+    if (!id) return '—';
+    return `<a class="hsd-link" href="${HSD_URL}${id}" target="_blank">${id}</a>`;
+}
+
+function renderDate(v) {
+    if (!v || v === '(blank)' || v === 'no date yet') return badge('badge-nodate', 'no date yet');
+    return badge('badge-date', v);
+}
+
+function renderInvolved(v) {
+    if (!v) return badge('badge-blank', '—');
+    return v.toLowerCase() === 'yes' ? badge('badge-yes', 'Yes') : badge('badge-no', 'No');
+}
+
+function renderStatus(v) {
+    if (!v || v === '(blank)') return badge('badge-blank', '—');
+    const lc = v.toLowerCase();
+    if (lc === 'done' || lc === 'closed' || lc === 'resolved' || lc === 'implemented') return badge('badge-done', v);
+    if (lc.includes('pending') || lc.includes('scoping')) return badge('badge-pending', v);
+    if (lc.includes('analysis') || lc.includes('progress') || lc.includes('open') || lc.includes('review')) return badge('badge-inprog', v);
+    return `<span style="color:#555;font-size:0.7rem;">${v}</span>`;
+}
+
+function renderDev(d) {
+    // d = {jira, status, done, trend}
+    if (!d) return badge('badge-blank', '—');
+    const done = (d.done || '').toLowerCase() === 'yes' ||
+                 ['done','closed','resolved','implemented'].includes((d.status||'').toLowerCase());
+    if (done) return badge('badge-done', 'Done');
+    if (d.jira && d.jira !== '(blank)') {
+        const s = renderStatus(d.status);
+        return `<a class="jira-link" href="${JIRA_URL}${d.jira}" target="_blank">${d.jira}</a><br>${s}`;
+    }
+    const st = d.status || '';
+    if (!st || st === '(blank)') return badge('badge-blank', '—');
+    return renderStatus(st);
+}
+
+function renderTrend(d) {
+    if (!d) return badge('badge-blank', '—');
+    const done = (d.done||'').toLowerCase() === 'yes' ||
+                 ['done','closed','resolved','implemented'].includes((d.status||'').toLowerCase());
+    if (done) return badge('badge-done', 'Done');
+    const t = d.trend;
+    if (!t || t === '(blank)') return badge('badge-blank', '—');
+    return `<span class="trend-val">${t}</span>`;
+}
+
+function trendSortKey(t) {
+    if (!t || t === '(blank)') return 0;
+    // parse "25WW10" or "2025WW10" or "WW25.10"
+    const m1 = t.match(/(\d{2,4})[Ww][Ww](\d+)/);
+    if (m1) {
+        let yr = parseInt(m1[1]); if (yr > 100) yr -= 2000;
+        return yr * 100 + parseInt(m1[2]);
+    }
+    const m2 = t.match(/[Ww][Ww](\d+)[._](\d+)/);
+    if (m2) return parseInt(m2[1]) * 100 + parseInt(m2[2]);
+    return 0;
+}
+
+function wwPlus2() {
+    // Returns current date + 14 days formatted as YYwwWW (ISO week)
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    const dow = d.getDay() || 7;          // 1=Mon .. 7=Sun
+    const thu = new Date(d);              // Thursday of the same ISO week
+    thu.setDate(d.getDate() + (4 - dow));
+    const yearStart = new Date(thu.getFullYear(), 0, 1);
+    const week = Math.ceil(((thu - yearStart) / 86400000 + 1) / 7);
+    const yr   = thu.getFullYear() % 100;
+    return `${String(yr).padStart(2,'0')}ww${String(week).padStart(2,'0')}`;
+}
+
+/* ── WW date arithmetic (for Val-Simulation / Val-Emulation) ───── */
+function parseWW(v) {
+    if (!v || v === '(blank)' || v === 'no date yet') return null;
+    const m1 = v.match(/(\d{2,4})[Ww][Ww](\d+)/);
+    if (m1) { let yr = parseInt(m1[1]); if (yr > 100) yr -= 2000; return {yr, wk: parseInt(m1[2])}; }
+    const m2 = v.match(/[Ww][Ww](\d+)[._](\d+)/);
+    if (m2) return {yr: parseInt(m2[1]), wk: parseInt(m2[2])};
+    return null;
+}
+function addWWWeeks(v, n) {
+    const p = parseWW(v);
+    if (!p) return null;
+    let {yr, wk} = p;
+    wk += n;
+    while (wk > 52) { wk -= 52; yr = (yr + 1) % 100; }
+    return `${String(yr).padStart(2,'0')}ww${String(wk).padStart(2,'0')}`;
+}
+function longPoleWW(arr) {
+    let maxKey = -1, maxVal = null;
+    for (const v of arr) {
+        const k = trendSortKey(v || '');
+        if (k > maxKey) { maxKey = k; maxVal = v; }
+    }
+    return maxKey > 0 ? maxVal : null;
+}
+function valSim(row) {
+    const trends = [
+        (row.compute||{}).trend, (row.igc||{}).trend, (row.kmd||{}).trend,
+        (row.pisa||{}).trend, (row.guc||{}).trend,
+        row.val_trend, row.sim_rdy,
+    ].filter(v => v && v !== '(blank)' && v !== 'no date yet');
+    const lp = longPoleWW(trends);
+    return lp ? addWWWeeks(lp, 4) : '';
+}
+function valEmu(row) {
+    const vs = valSim(row);
+    return vs ? addWWWeeks(vs, 6) : '';
+}
+
+function testTrend(row) {
+    const valInvolved = row.val_jira && row.val_jira !== '(blank)';
+    if (!valInvolved) return '';
+    const valDone = (row.val_done||'').toLowerCase() === 'yes' ||
+                    ['done','closed','resolved','implemented'].includes((row.val_status||'').toLowerCase());
+    if (valDone) return 'Done';
+    const t = row.val_trend;
+    if (t && t !== '(blank)') return t;
+    return wwPlus2();
+}
+
+function implTrend(row) {
+    const comps = ['compute','igc','kmd','pisa','guc'];
+    const isDone = k => {
+        const d = row[k] || {};
+        return (d.done||'').toLowerCase() === 'yes' ||
+               ['done','closed','resolved','implemented'].includes((d.status||'').toLowerCase());
+    };
+    // "involved" = component has an actual Jira assigned
+    const involved = comps.filter(k => (row[k]||{}).jira && (row[k]||{}).jira !== '(blank)');
+    const devAllDone = involved.length > 0 && involved.every(isDone);
+
+    const valDone = (row.val_done||'').toLowerCase() === 'yes' ||
+                    ['done','closed','resolved','implemented'].includes((row.val_status||'').toLowerCase());
+    const valInvolved = row.val_jira && row.val_jira !== '(blank)';
+
+    const state = (row.hsd_state || '').toLowerCase();
+
+    if (devAllDone) {
+        if (!valInvolved || valDone) {
+            // All dev + test done (or test not applicable) — mark Done for non-open state
+            if (state && state !== 'open') return 'Done';
+        } else {
+            // Dev all done but test dev still pending → current WW + 2 weeks
+            return wwPlus2();
+        }
+    }
+
+    const trends = comps
+        .filter(k => !isDone(k))
+        .map(k => (row[k] || {}).trend || '');
+    const valid = trends.filter(t => t && t !== '(blank)');
+    if (!valid.length) return involved.length > 0 ? 'Pending ETA' : '';
+    // return the latest WW among non-done components
+    return valid.reduce((best, t) => trendSortKey(t) >= trendSortKey(best) ? t : best, valid[0]);
+}
+/* ── Dev column filter value (status only, no Jira key) ─────────── */
+function devFilterVal(d) {
+    if (!d) return '—';
+    const done = (d.done||'').toLowerCase() === 'yes' ||
+                 ['done','closed','resolved','implemented'].includes((d.status||'').toLowerCase());
+    if (done) return 'Done';
+    if (d.jira && d.jira !== '(blank)') return (d.status && d.status !== '(blank)') ? d.status : 'Open';
+    const st = d.status || '';
+    return (!st || st === '(blank)') ? '—' : st;
+}
+/* ── Pre-render rows into <tbody> ─────────────────────────────────── */
+function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderTrendStr(v) {
+    if (!v || v === '(blank)') return badge('badge-blank', '—');
+    return `<span class="trend-val">${esc(v)}</span>`;
+}
+
+function buildRows(rows) {
+    const tbody = document.querySelector('#dcn-table tbody');
+    const frag  = document.createDocumentFragment();
+
+    rows.forEach(row => {
+        const tr = document.createElement('tr');
+        const it = implTrend(row);
+        const tt = testTrend(row);
+
+        tr.innerHTML = [
+            `<td>${row.ord}</td>`,
+            `<td>${renderHSD(row.id)}</td>`,
+            `<td class="title-cell">${esc(row.title)}</td>`,
+            `<td class="mf-cell" data-hsd="${esc(row.id)}" contenteditable="true" spellcheck="false">${esc(getMF(row.id))}</td>`,
+            `<td>${renderDate(row.sim_rdy)}</td>`,
+            `<td>${renderDate(row.emu_rdy)}</td>`,
+            `<td>${renderDate(row.turnin_trend_ww)}</td>`,
+            `<td>${row.study_priority ? esc(row.study_priority) : badge('badge-blank', '—')}</td>`,
+            `<td>${renderStatus(row.hsd_status)}</td>`,
+            `<td>${row.hsd_state ? esc(row.hsd_state) : badge('badge-blank', '—')}</td>`,
+            `<td>${renderInvolved(row.compute_involved)}</td>`,
+            `<td>${renderInvolved(row.kmd_involved)}</td>`,
+            `<td data-fv="${esc(devFilterVal(row.compute))}">${renderDev(row.compute)}</td>`,
+            `<td data-fv="${esc(devFilterVal(row.igc))}">${renderDev(row.igc)}</td>`,
+            `<td data-fv="${esc(devFilterVal(row.kmd))}">${renderDev(row.kmd)}</td>`,
+            `<td data-fv="${esc(devFilterVal(row.pisa))}">${renderDev(row.pisa)}</td>`,
+            `<td data-fv="${esc(devFilterVal(row.guc))}">${renderDev(row.guc)}</td>`,
+            `<td data-order="${trendSortKey((row.compute||{}).trend||'')}">${renderTrend(row.compute)}</td>`,
+            `<td data-order="${trendSortKey((row.igc||{}).trend||'')}">${renderTrend(row.igc)}</td>`,
+            `<td data-order="${trendSortKey((row.kmd||{}).trend||'')}">${renderTrend(row.kmd)}</td>`,
+            `<td data-order="${trendSortKey((row.pisa||{}).trend||'')}">${renderTrend(row.pisa)}</td>`,
+            `<td data-order="${trendSortKey((row.guc||{}).trend||'')}">${renderTrend(row.guc)}</td>`,
+            `<td data-fv="${esc(devFilterVal({jira:row.val_jira,status:row.val_status,done:row.val_done}))}">${ renderDev({jira:row.val_jira,status:row.val_status,done:row.val_done})}</td>`,
+            `<td data-order="${trendSortKey(tt||'')}">${tt === 'Done' ? badge('badge-done','Done') : tt ? `<span class="trend-val">${esc(tt)}</span>` : badge('badge-blank','—')}</td>`,
+            `<td data-order="${trendSortKey(it)}">${it === 'Done' ? badge('badge-done','Done') : it === 'Pending ETA' ? badge('badge-pending','Pending ETA') : it ? `<span class="trend-val">${esc(it)}</span>` : badge('badge-blank','—')}</td>`,
+            `<td data-order="${trendSortKey(valSim(row)||'')}">${renderTrendStr(valSim(row))}</td>`,
+            `<td data-order="${trendSortKey(valEmu(row)||'')}">${renderTrendStr(valEmu(row))}</td>`,
+            `<td><select class="rtlsim-sel" data-hsd="${esc(row.id)}" onchange="setRtlSim('${esc(row.id)}', this.value)"><option value="">&#8212;</option><option value="Yes" ${getRtlSim(row.id) === 'Yes' ? 'selected' : ''}>Yes</option><option value="No" ${getRtlSim(row.id) === 'No' ? 'selected' : ''}>No</option></select></td>`,
+        ].join('');
+
+        // highlight rows where all involved components are done
+        const comps = ['compute','igc','kmd','pisa','guc'];
+        const inv   = comps.filter(k => (row[k]||{}).jira && (row[k]||{}).jira !== '(blank)');
+        if (inv.length > 0 && inv.every(k => {
+            const d = row[k];
+            return (d.done||'').toLowerCase() === 'yes' ||
+                   ['done','closed','resolved','implemented'].includes((d.status||'').toLowerCase());
+        })) {
+            tr.style.background = '#f0fff4';
+        }
+
+        frag.appendChild(tr);
+    });
+
+    tbody.appendChild(frag);
+}
+
+/* ── DataTable init + multi-select filter engine ─────────────────── */
+let dt;
+let allRowsData = [];       // kept in insertion order (same as DT internal index)
+const activeFilters = {};   // colIdx (int) → Set<string>; absent = no filter
+
+/* Maps column index → normalised filter string for a raw data row.
+   Must mirror exactly what renderDate/renderStatus/renderInvolved/etc. display. */
+function normDate(v)     { return (!v || v === '(blank)' || v === 'no date yet') ? 'no date yet' : v; }
+function normTrend(v)    { return (!v || v === '(blank)') ? '—' : v; }
+function normStatus(v)   { return (!v || v === '(blank)') ? '—' : v; }
+function normInvolved(v) { return !v ? '—' : (v.toLowerCase() === 'yes' ? 'Yes' : 'No'); }
+
+function filterVal(colIdx, row) {
+    switch (colIdx) {
+        case  1: return row.id    || '—';
+        case  2: return row.title || '—';
+        case  3: return getMF(row.id) || '—';
+        case  4: return normDate(row.sim_rdy);
+        case  5: return normDate(row.emu_rdy);
+        case  6: return normDate(row.turnin_trend_ww);
+        case  7: return row.study_priority || '—';
+        case  8: return normStatus(row.hsd_status);
+        case  9: return row.hsd_state || '—';
+        case 10: return normInvolved(row.compute_involved);
+        case 11: return normInvolved(row.kmd_involved);
+        case 12: return devFilterVal(row.compute);
+        case 13: return devFilterVal(row.igc);
+        case 14: return devFilterVal(row.kmd);
+        case 15: return devFilterVal(row.pisa);
+        case 16: return devFilterVal(row.guc);
+        case 17: return normTrend((row.compute||{}).trend);
+        case 18: return normTrend((row.igc   ||{}).trend);
+        case 19: return normTrend((row.kmd   ||{}).trend);
+        case 20: return normTrend((row.pisa  ||{}).trend);
+        case 21: return normTrend((row.guc   ||{}).trend);
+        case 22: return devFilterVal({jira:row.val_jira,status:row.val_status,done:row.val_done});
+        case 23: return normTrend(testTrend(row));
+        case 24: return normTrend(implTrend(row));
+        case 25: return normTrend(valSim(row));
+        case 26: return normTrend(valEmu(row));
+        case 27: return getRtlSim(row.id) || '—';
+        default: return '—';
+    }
+}
+
+/* Global DataTables search extension — purely data-driven, no DOM reads */
+$.fn.dataTable.ext.search.push(function(settings, _d, rowIndex) {
+    const row = allRowsData[rowIndex];
+    if (!row) return true;
+    for (const key of Object.keys(activeFilters)) {
+        const sel = activeFilters[key];
+        if (!sel) continue;
+        if (!sel.has(filterVal(parseInt(key), row))) return false;
+    }
+    return true;
+});
+
+function initTable() {
+    dt = $('#dcn-table').DataTable({
+        pageLength: 50,
+        lengthMenu: [[25, 50, 100, -1], [25, 50, 100, 'All']],
+        autoWidth: false,
+        dom: '<"row mb-2"<"col-sm-4"l><"col-sm-4 text-center"i><"col-sm-4"f>>rt<"row mt-2"<"col-sm-6"i><"col-sm-6"p>>',
+    });
+}
+
+function initFilters(allRows) {
+    $('#dcn-table thead th[data-col]').each(function() {
+        const colIdx = parseInt($(this).data('col'));
+        if (colIdx === 0) return;
+        const $th = $(this);
+
+        // Collect unique filter values from the raw data
+        const vals = new Set();
+        allRows.forEach(row => vals.add(filterVal(colIdx, row) || '—'));
+        const sortedVals = [...vals].sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+
+        // Build dropdown panel — appended to <body> to escape overflow:hidden on <th>
+        const $panel = $('<div class="filter-panel" hidden></div>');
+        $panel.append('<input class="fp-search" type="text" placeholder="Search values…">');
+        $panel.append('<div class="fp-actions"><button class="fp-all">All</button><button class="fp-none">None</button></div>');
+        const $list = $('<div class="fp-list"></div>');
+        sortedVals.forEach(v => {
+            const safe = $('<span>').text(v).html();
+            $list.append(`<label><input type="checkbox" value="${safe}" checked> ${safe}</label>`);
+        });
+        $panel.append($list);
+        $panel.append('<div class="fp-footer"><button class="fp-apply">Apply</button></div>');
+        $('body').append($panel);
+
+        const $btn = $('<button class="filter-btn" title="Filter">&#9660;</button>');
+        $th.append($('<span class="filter-wrap"></span>').append($btn));
+
+        $btn.on('click', function(e) {
+            e.stopPropagation();
+            const wasHidden = $panel.prop('hidden');
+            // close all open panels
+            $('.filter-panel').prop('hidden', true);
+            if (wasHidden) {
+                // position the panel below the button using fixed coordinates
+                const rect = this.getBoundingClientRect();
+                $panel.css({
+                    top:  rect.bottom + 4,
+                    left: Math.min(rect.left, window.innerWidth - 280),
+                });
+                $panel.prop('hidden', false);
+            }
+        });
+        $panel.find('.fp-search').on('input', function() {
+            const q = this.value.toLowerCase();
+            $list.find('label').each(function() {
+                $(this).toggle(!q || $(this).text().toLowerCase().includes(q));
+            });
+        });
+        $panel.find('.fp-all').on('click',  e => { e.preventDefault(); $list.find('input').prop('checked', true); });
+        $panel.find('.fp-none').on('click', e => { e.preventDefault(); $list.find('input').prop('checked', false); });
+        $panel.find('.fp-apply').on('click', e => {
+            e.preventDefault();
+            const checked = $list.find('input:checked').map((_, el) => el.value).get();
+            if (checked.length === 0 || checked.length === sortedVals.length) {
+                delete activeFilters[colIdx]; $btn.removeClass('active');
+            } else {
+                activeFilters[colIdx] = new Set(checked); $btn.addClass('active');
+            }
+            dt.draw();
+            $panel.prop('hidden', true);
+        });
+        $panel.on('click', e => e.stopPropagation());
+    });
+    $(document).on('click.dcnfilters', () => $('.filter-panel').prop('hidden', true));
+}
+
+/* ── Summary counters ─────────────────────────────────────────────── */
+function updateSummary(rows) {
+    const total   = rows.length;
+    const compute = rows.filter(r => (r.compute_involved||'') === 'yes').length;
+    const kmd     = rows.filter(r => (r.kmd_involved||'') === 'yes').length;
+    const done    = rows.filter(r => {
+        const comps = ['compute','igc','kmd','pisa','guc'].map(k => r[k]).filter(Boolean);
+        const inv   = comps.filter(d => d.jira && d.jira !== '(blank)');
+        if (!inv.length) return false;
+        return inv.every(d => (d.done||'').toLowerCase() === 'yes' ||
+            ['done','closed','resolved','implemented'].includes((d.status||'').toLowerCase()));
+    }).length;
+    $('#cnt-total').text(total);
+    $('#cnt-compute').text(compute);
+    $('#cnt-kmd').text(kmd);
+    $('#cnt-done').text(done);
+    $('#cnt-open').text(total - done);
+    const now = new Date().toLocaleString('en-GB', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    $('#last-refresh').html(`Last refresh: <strong>${now}</strong>`);
+}
+
+/* ── Excel download ───────────────────────────────────────────────── */
+async function downloadExcel() {
+    const btn = document.getElementById('xl-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Generating…';
+    try {
+        const resp = await fetch('/xe5-dcn-status/download');
+        if (!resp.ok) throw new Error('Server error ' + resp.status);
+        const blob = await resp.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        const cd   = resp.headers.get('Content-Disposition') || '';
+        const m    = cd.match(/filename="?([^"]+)"?/);
+        a.download = m ? m[1] : 'xe5_DCN_enabling_status.xlsx';
+        a.href = url; a.click();
+        URL.revokeObjectURL(url);
+        btn.textContent = '✓ Downloaded!';
+        setTimeout(() => { btn.disabled = false; btn.innerHTML = '📥 Export Excel (JGS template)'; }, 4000);
+    } catch(e) {
+        btn.disabled = false;
+        btn.innerHTML = '📥 Export Excel (JGS template)';
+        alert('Download failed: ' + e.message);
+    }
+}
+
+/* ── Bootstrap ────────────────────────────────────────────────────── */
+$(function() {
+    // If ?refresh=1, show the slow-fetch warning upfront
+    if (window.location.search.includes('refresh=1')) {
+        document.getElementById('loading-title').textContent = 'Fetching Live Data';
+        document.getElementById('loading-msg').innerHTML = 'Fetching from HSD + Jira &mdash; please wait&hellip;<br>This can take 2&ndash;4 minutes.';
+    }
+    const url = '/xe5-dcn-status/data.json' + window.location.search;
+    fetch(url)
+        .then(r => {
+            if (!r.ok) return r.json().then(d => Promise.reject(d.error || 'Server error ' + r.status));
+            return r.json();
+        })
+        .then(data => {
+            // Update loading message based on whether data came from cache
+            if (data.cached) {
+                const mins = Math.round((data.cache_age_s || 0) / 60);
+                document.getElementById('loading-msg').textContent = 'Loaded from cache — rendering…';
+                const ageStr = mins < 1 ? 'just now' : `${mins} min ago`;
+                const badge = document.getElementById('cache-badge');
+                badge.innerHTML = `⏱ Data cached — last fetched ${ageStr}  <a href="?refresh=1" style="color:rgba(255,255,255,0.9);text-decoration:underline;">Force refresh</a>`;
+                badge.style.display = 'inline';
+            } else {
+                document.getElementById('loading-msg').textContent = 'Fetched live from HSD + Jira — rendering…';
+                const badge = document.getElementById('cache-badge');
+                badge.innerHTML = `⏱ Data just fetched live  <a href="/xe5-dcn-status" style="color:rgba(255,255,255,0.9);text-decoration:underline;">Reload</a>`;
+                badge.style.display = 'inline';
+            }
+            const rows = data.rows || data;
+            allRowsData = rows;
+            buildRows(rows);
+            initTable();
+            initFilters(rows);
+            /* Save Mega-Feature edits to localStorage on blur */
+            $('#dcn-table').on('blur', '.mf-cell', function() {
+                const hsdId = $(this).data('hsd');
+                saveMF(hsdId, $(this).text().trim());
+            });
+            /* Prevent newlines in the editable cell */
+            $('#dcn-table').on('keydown', '.mf-cell', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+            });
+            updateSummary(rows);
+            document.getElementById('loading-overlay').style.display = 'none';
+        })
+        .catch(err => {
+            document.getElementById('loading-overlay').style.display = 'none';
+            const banner = document.getElementById('error-banner');
+            banner.style.display = 'block';
+            banner.textContent = '⚠ Failed to load data: ' + err;
+        });
+});
+</script>
+</body>
+</html>

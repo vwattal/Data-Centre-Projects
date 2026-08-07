@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Sensitive
+.jira_token
+_archive/
+*.token
+*.key
+
+# Runtime state (written at runtime, not part of the tool)
+hsd2jira_cron.json
+hsd2jira_cron_log.json
+hsd2jira_trend_cron.json
+hsd2jira_trend_cron_log.json
+user_data.json
+jira_tracking_notes.json
+*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+nohup.out
+
+# Data files (not part of tool)
+*.db
+*.xlsx
+*.pptx
+user_data.json
+jira_tracking_notes.json
+
+# Screenshots (not needed for the tool)
+Screenshot*.png
+*.png
+backlog.png
+kmd_status_charts.png

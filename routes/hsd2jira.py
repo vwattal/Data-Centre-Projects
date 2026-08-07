@@ -10,7 +10,7 @@ import sys
 import importlib.util
 from pathlib import Path
 
-_tool_root = Path(__file__).resolve().parents[2] / 'HSD2Jira2HSD'
+_tool_root = Path(__file__).resolve().parents[1] / 'HSD2Jira2HSD'
 
 # Put HSD2Jira2HSD on sys.path so 'from config import ...' inside the blueprint
 # resolves to HSD2Jira2HSD/config.py (which points to HSD2Jira2HSD/.jira_token)

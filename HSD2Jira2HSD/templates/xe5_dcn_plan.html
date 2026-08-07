@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>xe5 DCN Enabling — Milestone Plan</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --intel-blue: #0071c5; --intel-dark: #003c71; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Intel Clear', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4f8; min-height: 100vh;
+    }
+    .page-header {
+      background: linear-gradient(135deg, #003c71 0%, #0055a2 100%);
+      color: white; padding: 12px 24px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    }
+    .page-header .intel-mark {
+      font-size: 1.1rem; font-weight: 800;
+      border: 2px solid white; padding: 1px 7px; border-radius: 4px;
+    }
+    .page-header h1 { font-size: 1.05rem; font-weight: 700; }
+    .page-header .nav-link {
+      margin-left: auto; color: rgba(255,255,255,0.85); text-decoration: none;
+      font-size: 0.78rem; border: 1px solid rgba(255,255,255,0.35);
+      padding: 4px 12px; border-radius: 4px;
+    }
+    .page-header .nav-link:hover { background: rgba(255,255,255,0.15); }
+    .dl-btn {
+      background: #ff6b35; color: white; border: none; border-radius: 5px;
+      padding: 6px 14px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; white-space: nowrap;
+    }
+    .dl-btn:hover { background: #e05520; }
+    .container {
+      max-width: 1000px; margin: 32px auto; padding: 0 20px;
+    }
+    .card {
+      background: white; border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      padding: 28px 32px;
+    }
+    .card-title {
+      font-size: 1rem; font-weight: 700; color: var(--intel-dark);
+      margin-bottom: 6px;
+    }
+    .card-sub {
+      font-size: 0.78rem; color: #666; margin-bottom: 24px;
+    }
+    .chart-wrap {
+      position: relative; height: 420px;
+    }
+    /* Milestone legend */
+    .milestones {
+      display: flex; gap: 24px; flex-wrap: wrap; margin-top: 22px;
+      padding-top: 18px; border-top: 1px solid #e8eef5;
+    }
+    .ms-item {
+      display: flex; align-items: center; gap: 8px; font-size: 0.78rem;
+    }
+    .ms-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+    }
+    .ms-label { font-weight: 700; color: #333; }
+    .ms-ww    { color: #666; font-size: 0.72rem; }
+    .ms-count { color: var(--intel-blue); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <span class="intel-mark">intel</span>
+  <h1>xe5 DCN Enabling — Milestone Plan</h1>
+  <a class="nav-link" href="/xe5-dcn-status">← Back to Status Table</a>
+  <button class="dl-btn" id="btnDownload" onclick="downloadPNG()">↓ Download PNG</button>
+</header>
+
+<div class="container">
+  <div class="card">
+    <div class="card-title">DCN Count vs. Work Week — Val Milestone Targets</div>
+    <div class="card-sub">
+      Linear ramp between validation milestones. X-axis: 26ww40 → 27ww18 &nbsp;|&nbsp;
+      Y-axis: cumulative DCN count enabled
+    </div>
+
+    <div class="chart-wrap">
+      <canvas id="planChart"></canvas>
+    </div>
+
+    <div class="milestones">
+      <div class="ms-item">
+        <div class="ms-dot" style="background:#ef5350;"></div>
+        <span class="ms-label">Val0.3</span>
+        <span class="ms-ww">26ww50</span>
+        <span class="ms-count">22 DCNs</span>
+      </div>
+      <div class="ms-item">
+        <div class="ms-dot" style="background:#ff9800;"></div>
+        <span class="ms-label">Val0.5</span>
+        <span class="ms-ww">27ww08</span>
+        <span class="ms-count">35 DCNs</span>
+      </div>
+      <div class="ms-item">
+        <div class="ms-dot" style="background:#43a047;"></div>
+        <span class="ms-label">Val0.8</span>
+        <span class="ms-ww">27ww18</span>
+        <span class="ms-count">40 DCNs</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Build week labels 26ww40 → 27ww18 ────────────────────────────────────────
+const labels = [];
+for (let w = 40; w <= 52; w++) labels.push(`26ww${String(w).padStart(2,'0')}`);
+for (let w = 1;  w <= 18; w++) labels.push(`27ww${String(w).padStart(2,'0')}`);
+// labels[0]='26ww40', labels[10]='26ww50', labels[20]='27ww08', labels[30]='27ww18'
+
+// ── Milestone anchors [index, dcnCount, label, colour] ───────────────────────
+const MILESTONES = [
+  { idx: 0,  count: 0,  label: 'Start',  ww: '26ww40', color: '#1565c0' },
+  { idx: 10, count: 22, label: 'Val0.3', ww: '26ww50', color: '#ef5350' },
+  { idx: 20, count: 35, label: 'Val0.5', ww: '27ww08', color: '#ff9800' },
+  { idx: 30, count: 40, label: 'Val0.8', ww: '27ww18', color: '#43a047' },
+];
+
+// ── Linear interpolation across all weeks ────────────────────────────────────
+function lerp(x0, y0, x1, y1, x) {
+  if (x1 === x0) return y0;
+  return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+}
+
+const planData = labels.map((_, i) => {
+  for (let m = 0; m < MILESTONES.length - 1; m++) {
+    const lo = MILESTONES[m], hi = MILESTONES[m + 1];
+    if (i >= lo.idx && i <= hi.idx) {
+      return parseFloat(lerp(lo.idx, lo.count, hi.idx, hi.count, i).toFixed(1));
+    }
+  }
+  return null;
+});
+
+// ── Point styles: large coloured diamond at milestones ───────────────────────
+const pointRadius = labels.map((_, i) =>
+  MILESTONES.some(m => m.idx === i && m.label !== 'Start') ? 10 : 3
+);
+const pointBg = labels.map((_, i) => {
+  const ms = MILESTONES.find(m => m.idx === i);
+  return ms ? ms.color : '#0071c5';
+});
+const pointStyle = labels.map((_, i) =>
+  MILESTONES.some(m => m.idx === i && m.label !== 'Start') ? 'rectRot' : 'circle'
+);
+
+// ── Vertical annotation lines via afterDraw plugin ───────────────────────────
+const verticalLinesPlugin = {
+  id: 'verticalLines',
+  afterDraw(chart) {
+    const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
+    MILESTONES.filter(m => m.label !== 'Start').forEach(ms => {
+      const xPos = x.getPixelForValue(ms.idx);
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash([6, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = ms.color;
+      ctx.globalAlpha = 0.55;
+      ctx.moveTo(xPos, top);
+      ctx.lineTo(xPos, bottom);
+      ctx.stroke();
+
+      // label above the line
+      ctx.globalAlpha = 1;
+      ctx.font = 'bold 11px Segoe UI, sans-serif';
+      ctx.fillStyle = ms.color;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${ms.label} (${ms.ww})`, xPos, top - 6);
+      ctx.restore();
+    });
+  }
+};
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
+const ctx = document.getElementById('planChart').getContext('2d');
+const planChart = new Chart(ctx, {
+  type: 'line',
+  plugins: [verticalLinesPlugin],
+  data: {
+    labels,
+    datasets: [{
+      label: 'DCN Count (target)',
+      data: planData,
+      borderColor: '#0071c5',
+      backgroundColor: 'rgba(0,113,197,0.07)',
+      borderWidth: 2.5,
+      pointRadius,
+      pointBackgroundColor: pointBg,
+      pointBorderColor: pointBg,
+      pointStyle,
+      pointHoverRadius: 8,
+      fill: true,
+      tension: 0,          // straight lines between points
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { top: 24 } },
+    scales: {
+      x: {
+        title: { display: true, text: 'Work Week', font: { size: 12, weight: '600' }, color: '#444' },
+        grid: { color: 'rgba(0,0,0,0.06)' },
+        ticks: {
+          font: { size: 10 },
+          maxRotation: 45,
+          callback(val, idx) {
+            // Show every 2nd label to avoid crowding
+            return idx % 2 === 0 ? labels[idx] : '';
+          }
+        }
+      },
+      y: {
+        title: { display: true, text: 'DCN Count', font: { size: 12, weight: '600' }, color: '#444' },
+        min: 0,
+        max: 45,
+        grid: { color: 'rgba(0,0,0,0.07)' },
+        ticks: { stepSize: 5, font: { size: 11 } }
+      }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: ([item]) => item.label,
+          label(item) {
+            const ms = MILESTONES.find(m => m.idx === item.dataIndex);
+            const base = `DCN Count: ${item.parsed.y}`;
+            return ms && ms.label !== 'Start' ? [`${base}`, `🎯 ${ms.label} milestone`] : base;
+          }
+        }
+      }
+    }
+  }
+});
+
+function downloadPNG() {
+  const link = document.createElement('a');
+  link.download = 'xe5_dcn_milestone_plan.png';
+  link.href = planChart.toBase64Image('image/png', 1);
+  link.click();
+}
+</script>
+</body>
+</html>

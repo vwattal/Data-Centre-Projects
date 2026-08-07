@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JIRA Tracking Rules – Intel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Nunito',-apple-system,sans-serif;
+  background:linear-gradient(160deg,#060c18 0%,#091525 60%,#060e1c 100%);
+  min-height:100vh;color:#fff;font-weight:700;
+}
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(3,6,16,.95);backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.1);
+  padding:10px 24px;display:flex;align-items:center;gap:14px;
+}
+.back{text-decoration:none;color:#fff;font-size:.7rem;
+  padding:4px 11px;border:1px solid rgba(255,255,255,.28);border-radius:6px;transition:all .2s}
+.back:hover{background:rgba(255,255,255,.1)}
+.ttl{font-size:.95rem;font-weight:900}
+.ttl span{font-size:.58rem;color:rgba(255,255,255,.5);font-weight:600;display:block;margin-top:1px}
+.page{padding:72px 28px 40px;max-width:1200px;margin:0 auto}
+
+.panel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:20px 22px;margin-bottom:24px}
+.panel-hd{font-size:.7rem;text-transform:uppercase;letter-spacing:.7px;color:rgba(255,255,255,.4);
+  margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.panel-hd::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+
+/* Tree structure */
+.tree{font-family:'Courier New',monospace;font-size:.75rem;line-height:1.6;color:#80deea;background:rgba(0,0,0,.3);
+  padding:20px;border-radius:10px;border:1px solid rgba(0,199,183,.2)}
+.tree > div{white-space:pre;}
+.tree-line{color:rgba(255,255,255,.5)}
+.tree-epic{color:#ce93d8;font-weight:700}
+.tree-story{color:#81c784;font-weight:700}
+.tree-child{color:#ffcc80;font-weight:600}
+.tree-task{color:#90caf9;font-weight:700}
+
+/* Rich text editor */
+.editor-container{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden}
+.editor-toolbar{background:rgba(0,0,0,.3);padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex;gap:8px;flex-wrap:wrap;transition:all .3s ease;max-height:500px;overflow:hidden}
+.editor-toolbar.hidden{max-height:0;padding:0;border:none;opacity:0}
+.toolbar-toggle{float:right;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:6px;padding:4px 10px;color:rgba(255,255,255,.5);font-size:.6rem;cursor:pointer;
+  transition:.2s;font-weight:600;margin-left:10px}
+.toolbar-toggle:hover{background:rgba(255,255,255,.12);color:rgba(255,255,255,.8)}
+.editor-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:6px;
+  padding:6px 12px;color:#fff;font-size:.7rem;cursor:pointer;transition:.2s;font-weight:600}
+.editor-btn:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3)}
+.editor-btn.active{background:rgba(0,113,197,.3);border-color:#0071c5;color:#90caf9}
+.editor-select{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:6px;
+  padding:6px 10px;color:#fff;font-size:.7rem;font-weight:600;cursor:pointer;outline:none}
+.editor-select option{background:#0a0f1e;color:#fff}
+.editor-content{
+  min-height:400px;padding:20px;color:rgba(255,255,255,.85);font-size:.8rem;line-height:1.7;
+  outline:none;overflow-y:auto;max-height:600px;font-weight:400
+}
+.editor-content:empty::before{content:attr(data-placeholder);color:rgba(255,255,255,.3);font-style:italic}
+.editor-content ul,.editor-content ol{margin-left:24px;margin-top:8px;margin-bottom:8px}
+.editor-content li{margin-bottom:4px}
+.editor-content li ul,.editor-content li ol{margin-top:4px;margin-bottom:0}
+.editor-content li li{margin-bottom:2px;font-size:.75rem}
+.editor-content p{margin-bottom:12px}
+.editor-content h1{font-size:1.4rem;margin:16px 0 8px;color:#90caf9}
+.editor-content h2{font-size:1.2rem;margin:14px 0 8px;color:#80cbc4}
+.editor-content h3{font-size:1rem;margin:12px 0 6px;color:#ffcc80}
+.editor-content strong{font-weight:900;color:#fff}
+.editor-content em{font-style:italic;color:#ce93d8}
+
+.save-indicator{text-align:right;font-size:.65rem;color:rgba(100,200,150,.6);margin-top:10px;min-height:18px}
+.info-box{background:rgba(0,113,197,.08);border:1px solid rgba(0,113,197,.22);
+  border-radius:10px;padding:12px 14px;font-size:.65rem;color:rgba(255,255,255,.55);margin-top:16px;font-weight:400;line-height:1.6}
+.info-box strong{color:#90caf9;font-weight:700}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/jira-tracking-design" class="back">← Back to Design</a>
+  <div class="ttl">JIRA Tracking Rules
+    <span>Structure & Guidelines</span>
+  </div>
+</div>
+
+<div class="page">
+  <!-- Tree Structure -->
+  <div class="panel">
+    <div class="panel-hd">📋 JIRA Structure Created by Tool</div>
+    <div class="tree" id="treeStructure">
+<div><span class="tree-epic">📦 [Epic] Feature Name</span></div>
+<div class="tree-line">│</div>
+<div><span class="tree-line">├── </span><span class="tree-story">📗 [Parent][Story] [Code Complete] Feature name</span></div>
+<div><span class="tree-line">│   ├── </span><span class="tree-child">📘 [Child][Story][Code Complete][Part-1]</span></div>
+<div><span class="tree-line">│   ├── </span><span class="tree-child">📘 [Child][Story][Code Complete][Part-2]</span></div>
+<div><span class="tree-line">│   └── </span><span class="tree-child">📘 [Child][Story][Test][IGT]</span></div>
+<div class="tree-line">│</div>
+<div><span class="tree-line">├── </span><span class="tree-story">📙 [Parent][Story][Val][Sim] Feature Name</span></div>
+<div class="tree-line">│</div>
+<div><span class="tree-line">├── </span><span class="tree-story">📕 [Parent][Story][Val][Emu] Feature Name</span></div>
+<div class="tree-line">│</div>
+<div><span class="tree-line">└── </span><span class="tree-task">📋 [Parent][Task][Upstream] Feature Name</span></div>
+<div><span class="tree-line">    └── </span><span class="tree-child">📘 [Child][Story][Upstream]</span></div>
+    </div>
+    <div class="info-box">
+      <strong>Note:</strong> Subtasks are created manually by team members and are not part of the automated structure.
+      <br><br>
+      <strong>🎯 Try it out:</strong> <a href="/hsd2jira" style="color:#90caf9;font-weight:700">Create JIRA Structure Demo →</a>
+    </div>
+  </div>
+
+  <!-- Rules Editor -->
+  <div class="panel">
+    <div class="panel-hd">✍️ Rules & Guidelines
+      <button class="toolbar-toggle" onclick="toggleToolbar()" id="toolbarToggle">Hide Toolbar ▲</button>
+    </div>
+    
+    <div class="editor-container">
+      <!-- Toolbar -->
+      <div class="editor-toolbar" id="editorToolbar">
+        <button class="editor-btn" onclick="execCmd('bold')" title="Bold"><strong>B</strong></button>
+        <button class="editor-btn" onclick="execCmd('italic')" title="Italic"><em>I</em></button>
+        <button class="editor-btn" onclick="execCmd('underline')" title="Underline"><u>U</u></button>
+        <button class="editor-btn" onclick="execCmd('insertUnorderedList')" title="Bullet List">• List</button>
+        <button class="editor-btn" onclick="execCmd('insertOrderedList')" title="Numbered List">1. List</button>
+        <button class="editor-btn" onclick="execCmd('indent')" title="Indent / Sub-bullet">→ Indent</button>
+        <button class="editor-btn" onclick="execCmd('outdent')" title="Outdent">← Outdent</button>
+        
+        <select class="editor-select" onchange="execCmd('formatBlock', this.value); this.selectedIndex=0">
+          <option value="">Format</option>
+          <option value="h1">Heading 1</option>
+          <option value="h2">Heading 2</option>
+          <option value="h3">Heading 3</option>
+          <option value="p">Paragraph</option>
+        </select>
+        
+        <select class="editor-select" onchange="execCmd('fontSize', this.value); this.selectedIndex=0">
+          <option value="">Font Size</option>
+          <option value="1">Very Small</option>
+          <option value="2">Small</option>
+          <option value="3">Normal</option>
+          <option value="4">Large</option>
+          <option value="5">Very Large</option>
+          <option value="6">Huge</option>
+        </select>
+        
+        <button class="editor-btn" onclick="execCmd('removeFormat')" title="Clear Formatting">Clear Format</button>
+      </div>
+      
+      <!-- Content Area -->
+      <div class="editor-content" contenteditable="true" id="rulesEditor" 
+           data-placeholder="Type your JIRA tracking rules and guidelines here...">
+      </div>
+    </div>
+    
+    <div class="save-indicator" id="saveIndicator"></div>
+    
+    <div class="info-box">
+      <strong>💾 Auto-save enabled:</strong> Your changes are automatically saved as you type. All team members will see your updates in real-time.
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const API = '/api/jira-tracking-rules';
+  const editor = document.getElementById('rulesEditor');
+  const saveInd = document.getElementById('saveIndicator');
+  let saveTimer;
+
+  function execCmd(command, value = null) {
+    document.execCommand(command, false, value);
+    editor.focus();
+  }
+  window.execCmd = execCmd;
+
+  function toggleToolbar() {
+    const toolbar = document.getElementById('editorToolbar');
+    const toggleBtn = document.getElementById('toolbarToggle');
+    toolbar.classList.toggle('hidden');
+    if (toolbar.classList.contains('hidden')) {
+      toggleBtn.textContent = 'Show Toolbar ▼';
+    } else {
+      toggleBtn.textContent = 'Hide Toolbar ▲';
+    }
+  }
+  window.toggleToolbar = toggleToolbar;
+
+  function showSaved(msg) {
+    saveInd.textContent = msg;
+    setTimeout(() => { saveInd.textContent = ''; }, 2000);
+  }
+
+  function saveContent() {
+    const content = editor.innerHTML;
+    fetch(API, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({content: content})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        showSaved('✓ Saved');
+      }
+    })
+    .catch(err => console.error('Save failed:', err));
+  }
+
+  // Load content on page load
+  fetch(API)
+    .then(r => r.json())
+    .then(data => {
+      if (data.content) {
+        editor.innerHTML = data.content;
+      }
+    })
+    .catch(err => console.error('Load failed:', err));
+
+  // Auto-save on input
+  editor.addEventListener('input', function() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveContent, 800);
+  });
+
+  // Save on blur
+  editor.addEventListener('blur', function() {
+    clearTimeout(saveTimer);
+    saveContent();
+  });
+
+  // Poll server every 20s for updates from other users (skip if editor is focused)
+  let _lastKnownContent = null;
+  setInterval(function() {
+    if (document.activeElement === editor) return; // user is typing, skip
+    fetch(API)
+      .then(r => r.json())
+      .then(data => {
+        const incoming = data.content || '';
+        if (incoming !== _lastKnownContent && incoming !== editor.innerHTML) {
+          editor.innerHTML = incoming;
+          _lastKnownContent = incoming;
+          showSaved('↻ Updated by another user');
+        } else {
+          _lastKnownContent = incoming;
+        }
+      })
+      .catch(() => {});
+  }, 20000);
+})();
+</script>
+</body>
+</html>

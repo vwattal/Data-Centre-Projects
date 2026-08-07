@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSD → Jira Delivery Flow - Intel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --b:#0071c5;--dk:#003c71;--nv:#001e3c;
+  --tl:#00897b;--pu:#7b1fa2;--or:#f57c00;--gn:#43a047;--rd:#e53935;
+}
+html{scroll-behavior:smooth;font-size:20px}
+body{
+  font-family:'Nunito',-apple-system,BlinkMacSystemFont,'Trebuchet MS',Roboto,sans-serif;
+  background:linear-gradient(160deg,#060c18 0%,#091525 50%,#060e1c 100%);
+  min-height:100vh; color:white; overflow-x:hidden; font-weight:700;
+}
+/* top bar */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(3,6,16,.95);backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.1);
+  padding:9px 20px;display:flex;align-items:center;gap:12px;
+}
+.back{
+  text-decoration:none;color:white;font-size:.78rem;
+  padding:4px 10px;border:1px solid rgba(255,255,255,.35);border-radius:5px;
+  transition:all .2s;white-space:nowrap;flex-shrink:0;
+}
+.back:hover{background:rgba(255,255,255,.12);color:white}
+.ttl{font-size:.95rem;font-weight:700;flex:1}
+.ttl span{font-size:.65rem;color:white;display:block;margin-top:1px}
+.step-ctr{font-size:.78rem;color:white;white-space:nowrap}
+.fsbtn{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);border-radius:7px;
+  color:white;cursor:pointer;padding:5px 11px;font-size:.75rem;font-weight:700;
+  display:flex;align-items:center;gap:6px;transition:background .2s;white-space:nowrap;flex-shrink:0;
+  font-family:inherit;
+}
+.fsbtn:hover{background:rgba(255,255,255,.2)}
+.fsbtn .fsico{font-size:.9rem}
+/* progress */
+.pbar{position:fixed;top:0;left:0;right:0;height:3px;z-index:101;background:rgba(255,255,255,.1)}
+.pfill{height:100%;background:linear-gradient(90deg,#00c7b7,var(--b));transition:width .5s ease;width:0}
+/* step dots */
+.sdots{
+  position:fixed;left:16px;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:9px;z-index:50;
+}
+.sd{
+  width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.2);
+  cursor:pointer;transition:all .25s;
+}
+.sd.done{background:rgba(255,255,255,.5)}
+.sd.active{background:white;width:11px;height:11px;box-shadow:0 0 8px rgba(255,255,255,.5)}
+/* stage */
+.stage{padding:55px 24px 120px 24px;max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:0}
+/* each section */
+.sec{
+  opacity:0;transform:translateY(44px);
+  transition:opacity .55s ease,transform .55s ease;
+  padding:32px 0 24px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.sec.vis{opacity:1;transform:translateY(0)}
+.sec:first-child{opacity:1;transform:translateY(0)}
+/* step label */
+.slbl{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--b);padding:4px 14px;border-radius:20px;
+  font-size:.68rem;font-weight:800;letter-spacing:.5px;margin-bottom:9px;
+}
+.slbl .sn{background:rgba(255,255,255,.25);padding:1px 6px;border-radius:10px}
+.sec h2{font-size:1.45rem;margin-bottom:9px;line-height:1.2;font-weight:800}
+.sub{font-size:.88rem;color:white;margin-bottom:18px;line-height:1.6;max-width:740px}
+/* two col */
+.tc{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;align-items:start}
+.tc.flip{grid-template-columns:1fr 1.3fr}
+.tc.eq{grid-template-columns:1fr 1fr}
+/* card */
+.crd{background:rgba(8,18,40,.78);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:16px 18px;backdrop-filter:blur(10px)}
+/* ── HSD table ── */
+.ht{width:100%;border-collapse:collapse;font-size:.73rem}
+.ht th{background:rgba(0,28,60,.9);color:white;padding:7px 10px;font-size:.6rem;text-transform:uppercase;letter-spacing:.4px;text-align:left}
+.ht td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.1);color:white}
+.ht tr:nth-child(even) td{background:rgba(255,255,255,.03)}
+.ht .hl td{background:rgba(0,199,183,.1)!important;border-left:2.5px solid #00c7b7}
+.kmv{color:#00c7b7;font-weight:700}
+/* scan */
+.swrp{position:relative}
+.sbeam{
+  position:absolute;left:0;right:0;height:28px;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(0,113,197,.28),transparent);
+  border-top:1.5px solid rgba(0,113,197,.55);
+}
+/* ── Jira tree ── */
+.jtree{display:flex;flex-direction:column;gap:3px;width:100%}
+.tepic{
+  background:linear-gradient(135deg,rgba(123,31,162,.25),rgba(123,31,162,.12));
+  border:1.5px solid rgba(123,31,162,.55);border-radius:9px;
+  padding:11px 15px;display:flex;align-items:center;gap:9px;
+}
+.bl{font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.bl-ep{background:#7b1fa2;color:white}
+.bl-st{background:#0288d1;color:white}
+.bl-igt{background:#00897b;color:white}
+.bl-sim{background:#f57c00;color:white}
+.bl-emu{background:#7b1fa2;color:white}
+.bl-tk{background:#43a047;color:white}
+.tkey{font-size:.64rem;color:white;font-weight:700;white-space:nowrap}
+.ttxt{font-size:.78rem;flex:1;font-weight:700}
+.ech{font-size:.62rem;font-weight:700;padding:2px 9px;border-radius:10px;background:rgba(255,255,255,.11);white-space:nowrap;color:white}
+.tch{padding-left:22px;display:flex;flex-direction:column;gap:3px;position:relative;margin-top:3px}
+.tch::before{content:'';position:absolute;left:9px;top:0;bottom:0;width:1.5px;background:rgba(255,255,255,.12)}
+.tstr{border-radius:7px;padding:8px 12px;display:flex;align-items:center;gap:8px;border-left:2.5px solid}
+.tstr.cc{background:rgba(2,136,209,.14);border-color:#0288d1}
+.tstr.igt{background:rgba(0,137,123,.14);border-color:#00897b}
+.tstr.sim{background:rgba(245,124,0,.14);border-color:#f57c00}
+.tstr.emu{background:rgba(123,31,162,.14);border-color:#7b1fa2}
+.ttsk{background:rgba(67,160,71,.14);border:1px solid rgba(67,160,71,.4);border-radius:7px;padding:8px 12px;display:flex;align-items:center;gap:8px}
+/* subtasks */
+.stch{padding-left:22px;margin-top:3px;display:flex;flex-direction:column;gap:2px;position:relative}
+.stch::before{content:'';position:absolute;left:9px;top:0;bottom:0;width:1.5px;background:rgba(255,255,255,.08)}
+.srow{background:rgba(255,255,255,.06);border-left:2px solid rgba(255,255,255,.25);border-radius:5px;padding:5px 10px;display:flex;align-items:center;gap:7px;font-size:.67rem;color:white}
+.av{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.5rem;font-weight:700;color:white;flex-shrink:0}
+.noest{margin-left:auto;font-size:.56rem;color:white;font-style:italic}
+/* effort formula */
+.eform{background:rgba(0,0,0,.3);border-radius:9px;padding:13px 15px;border:1px solid rgba(255,255,255,.09);margin-bottom:12px}
+.etitle{font-size:.62rem;color:white;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.frow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.fn{font-size:.68rem;color:white;width:145px;flex-shrink:0}
+.fb{flex:1;background:rgba(255,255,255,.08);border-radius:3px;height:17px;overflow:hidden}
+.fbi{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:6px}
+.fbi span{font-size:.58rem;font-weight:700;color:white;white-space:nowrap}
+.ff{font-size:.6rem;color:white;width:72px;text-align:right;flex-shrink:0}
+/* engineer character */
+.eng-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px}
+.bubble{
+  background:white;color:#003c71;border-radius:14px;
+  padding:8px 14px;font-size:.72rem;font-weight:700;line-height:1.45;
+  text-align:center;max-width:190px;position:relative;
+}
+.bubble::after{
+  content:'';position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:white;
+}
+.eng-name{font-size:.78rem;font-weight:700;margin-top:6px}
+.eng-role{font-size:.62rem;color:white;margin-top:1px}
+/* weekly bars */
+.wkrow{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.wklbl{font-size:.64rem;font-weight:700;color:white;width:36px;flex-shrink:0}
+.wkbg{flex:1;background:rgba(255,255,255,.08);border-radius:3px;height:20px;overflow:hidden}
+.wkfill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:7px}
+.wkfill span{font-size:.59rem;font-weight:700;color:white;white-space:nowrap}
+.wkst{font-size:.6rem;width:58px;text-align:right;flex-shrink:0}
+/* backlog */
+.blrule{
+  background:rgba(0,113,197,.14);border:1px solid rgba(0,113,197,.28);
+  border-radius:7px;padding:8px 12px;display:flex;align-items:center;gap:9px;
+  font-size:.7rem;margin-bottom:6px;
+}
+.rnum{width:21px;height:21px;background:var(--b);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;flex-shrink:0}
+.blit{background:rgba(255,255,255,.05);border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:9px;font-size:.7rem;border-left:3px solid;margin-bottom:4px}
+.blit.p1{border-color:var(--rd)}.blit.p2{border-color:var(--or)}.blit.p3{border-color:var(--or)}.blit.p4{border-color:var(--gn)}
+.pbadge{font-size:.57rem;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.pbadge.p1{background:var(--rd);color:white}.pbadge.p2{background:var(--or);color:white}.pbadge.p3{background:#fb8c00;color:white}.pbadge.p4{background:var(--gn);color:white}
+.blkey{font-size:.63rem;color:white;font-weight:700}
+/* ww calendar */
+.wwgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:12px}
+.wwc{background:rgba(255,255,255,.05);border-radius:6px;padding:7px 3px;text-align:center;font-size:.62rem}
+.wwc.cur{background:rgba(0,113,197,.35);border:1.5px solid var(--b)}
+.wwc.cc-range{background:rgba(2,136,209,.25);border:1px solid rgba(2,136,209,.5)}
+.wwc.igt-range{background:rgba(0,137,123,.25);border:1px solid rgba(0,137,123,.5)}
+.wwc.done-ww{background:rgba(67,160,71,.35);border:1.5px solid var(--gn)}
+.wwc .wn{font-weight:700}.wwc .wt{font-size:.52rem;color:white;margin-top:2px}
+.wwc.cc-range .wt,.wwc.igt-range .wt,.wwc.done-ww .wt{color:white}
+/* writeback */
+.wbrow{background:rgba(67,160,71,.12);border:1.5px solid rgba(67,160,71,.4);border-radius:9px;padding:14px 18px;margin-top:14px;display:flex;align-items:center;gap:14px}
+.tick{width:34px;height:34px;background:var(--gn);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.wbrow .wbt{font-size:.78rem;font-weight:700}
+.wbrow .wbs{font-size:.67rem;color:white;margin-top:2px}
+.ynpill{background:var(--gn);color:white;padding:3px 11px;border-radius:14px;font-size:.67rem;font-weight:700;margin-left:auto}
+/* loop complete */
+.loopend{text-align:center;padding:30px 20px}
+.lcircle{width:86px;height:86px;border-radius:50%;background:linear-gradient(135deg,var(--b),var(--tl));display:inline-flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:14px;box-shadow:0 0 40px rgba(0,113,197,.4)}
+.lsteps{display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;margin-top:16px}
+.ls{background:rgba(255,255,255,.1);padding:5px 12px;border-radius:18px;font-size:.68rem}
+.larr{color:white;font-size:.8rem}
+/* intro flow diagram */
+.intro-flow{display:flex;align-items:center;gap:0;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
+.ibox{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:10px 14px;text-align:center;flex-shrink:0;min-width:110px}
+.ibox .ii{font-size:1.4rem;display:block;margin-bottom:4px}
+.ibox .it{font-size:.62rem;font-weight:700;line-height:1.3}
+.ibox .is{font-size:.56rem;color:white;margin-top:2px;line-height:1.3}
+.iarr{font-size:1.4rem;color:white;padding:0 4px;flex-shrink:0}
+.ibox.i0{border-color:rgba(0,113,197,.5);background:rgba(0,113,197,.12)}
+.ibox.i1{border-color:rgba(0,137,123,.5);background:rgba(0,137,123,.12)}
+.ibox.i2{border-color:rgba(123,31,162,.5);background:rgba(123,31,162,.12)}
+.ibox.i3{border-color:rgba(233,30,140,.5);background:rgba(233,30,140,.12)}
+.ibox.i4{border-color:rgba(245,124,0,.5);background:rgba(245,124,0,.12)}
+.ibox.i5{border-color:rgba(67,160,71,.5);background:rgba(67,160,71,.12)}
+.ibox.i6{border-color:rgba(0,113,197,.5);background:rgba(0,113,197,.08)}
+/* continue button */
+.cont-wrap{position:fixed;bottom:26px;right:26px;z-index:60}
+.contbtn{
+  background:linear-gradient(135deg,var(--b),#0050a0);
+  color:white;border:none;border-radius:30px;
+  padding:13px 28px;font-size:.88rem;font-weight:700;
+  cursor:pointer;box-shadow:0 6px 24px rgba(0,113,197,.5);
+  transition:all .2s;display:flex;align-items:center;gap:9px;
+  letter-spacing:.3px;
+}
+.contbtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,113,197,.6)}
+.contbtn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.contbtn.done{background:linear-gradient(135deg,var(--gn),#2e7d32)}
+/* ── animations ── */
+@keyframes scanA{0%{top:24px}85%{top:110px}100%{top:24px}}
+@keyframes floatA{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes popA{from{opacity:0;transform:scale(.65) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes slideL{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes growBar{from{width:0}}
+@keyframes blinkC{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes typeA{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes glowP{0%,100%{box-shadow:0 0 10px rgba(0,113,197,.2)}50%{box-shadow:0 0 28px rgba(0,113,197,.6)}}
+
+.animate-scan{animation:scanA 2.4s ease-in-out infinite}
+.animate-float{animation:floatA 3.2s ease-in-out infinite}
+.animate-glow{animation:glowP 2.2s ease-in-out infinite}
+#eng-cursor{animation:blinkC 1s step-end infinite}
+
+.vis .tepic{animation:slideL .4s ease .05s both}
+.vis .tstr.cc{animation:slideL .35s ease .2s both}
+.vis .stch .srow:nth-child(1){animation:slideL .3s ease .32s both}
+.vis .stch .srow:nth-child(2){animation:slideL .3s ease .48s both}
+.vis .stch .srow:nth-child(3){animation:slideL .3s ease .64s both}
+.vis .stch .srow:nth-child(4){animation:slideL .3s ease .80s both}
+.vis .tstr.igt{animation:slideL .35s ease .95s both}
+.vis .tstr.sim{animation:slideL .35s ease 1.1s both}
+.vis .tstr.emu{animation:slideL .35s ease 1.25s both}
+.vis .ttsk{animation:slideL .35s ease 1.4s both}
+
+.vis .fbi:nth-of-type(1){animation:growBar .8s ease .15s both}
+.vis .fbi:nth-of-type(2){animation:growBar .8s ease .35s both}
+.vis .fbi:nth-of-type(3){animation:growBar .8s ease .55s both}
+.vis .fbi:nth-of-type(4){animation:growBar .8s ease .75s both}
+
+.vis .wkrow:nth-child(1){animation:slideL .3s ease .1s both}
+.vis .wkrow:nth-child(2){animation:slideL .3s ease .28s both}
+.vis .wkrow:nth-child(3){animation:slideL .3s ease .46s both}
+.vis .wkrow:nth-child(4){animation:slideL .3s ease .64s both}
+.vis .wkrow:nth-child(1) .wkfill{animation:growBar .7s ease .2s both}
+.vis .wkrow:nth-child(2) .wkfill{animation:growBar .7s ease .38s both}
+.vis .wkrow:nth-child(3) .wkfill{animation:growBar .7s ease .56s both}
+.vis .wkrow:nth-child(4) .wkfill{animation:growBar .7s ease .74s both}
+
+.vis .blrule:nth-child(1){animation:slideL .3s ease .08s both}
+.vis .blrule:nth-child(2){animation:slideL .3s ease .22s both}
+.vis .blrule:nth-child(3){animation:slideL .3s ease .36s both}
+.vis .blrule:nth-child(4){animation:slideL .3s ease .50s both}
+.vis .blit:nth-child(1){animation:slideL .3s ease .65s both}
+.vis .blit:nth-child(2){animation:slideL .3s ease .80s both}
+.vis .blit:nth-child(3){animation:slideL .3s ease .95s both}
+.vis .blit:nth-child(4){animation:slideL .3s ease 1.1s both}
+
+.vis .wwc{animation:popA .3s ease var(--d,0s) both}
+.vis .wbrow{animation:popA .5s ease .9s both}
+.vis .lcircle{animation:popA .5s ease .1s both}
+.vis .ibox{animation:popA .35s ease var(--d,0s) both}
+
+@media(max-width:760px){
+  .tc,.tc.flip,.tc.eq{grid-template-columns:1fr}
+  .sdots{display:none}
+  .intro-flow{flex-wrap:wrap;justify-content:center}
+}
+/* epic collapsible */
+details.epic-toggle{width:100%}
+details.epic-toggle>summary{list-style:none;cursor:pointer;transition:opacity .2s}
+details.epic-toggle>summary::-webkit-details-marker{display:none}
+details.epic-toggle>summary::marker{display:none}
+details.epic-toggle>summary:hover{opacity:.82}
+.etoggle-hint{margin-left:auto;font-size:.6rem;color:white;letter-spacing:.2px;font-style:italic}
+details.epic-toggle:not([open]) .etoggle-hint::after{content:'▶ show stories'}
+details.epic-toggle[open] .etoggle-hint::after{content:'▽ hide stories'}
+</style>
+</head>
+<body>
+
+<div class="pbar"><div class="pfill" id="pfill"></div></div>
+
+<div class="topbar">
+  <a href="/" class="back">← Home</a>
+  <div class="ttl">
+    ⚡ HSD → Jira Delivery Modernisation
+    <span>Click Continue to walk through the full loop</span>
+  </div>
+  <div class="step-ctr" id="stepctr"></div>
+  <button class="fsbtn" id="fsbtn" onclick="toggleFS()" title="Fullscreen (F)">
+    <span class="fsico" id="fsico">⛶</span> <span id="fstxt">Fullscreen</span>
+  </button>
+</div>
+
+<div class="sdots" id="sdots"></div>
+
+<main class="stage">
+
+<!-- ════════════════════════════════════════
+     SECTION 0 — Intro (always visible)
+════════════════════════════════════════ -->
+<section class="sec" id="s0">
+  <h2 style="font-size:1.5rem;margin-bottom:8px">🔄 The Delivery Modernisation Loop</h2>
+  <p class="sub">Automated loop: HSD database → Jira hierarchy → engineering execution → backlog ranking → projected dates → HSD writeback. Click <strong>Continue →</strong> to step through each phase.</p>
+  <div class="intro-flow">
+    <div class="ibox i0" style="--d:.05s"><span class="ii">🗄️</span><div class="it">HSD Database</div><div class="is">Feature source</div></div>
+    <span class="iarr">⟶</span>
+    <div class="ibox i1" style="--d:.15s"><span class="ii">🤖</span><div class="it">Automated Scan</div><div class="is">Find KMD features</div></div>
+    <span class="iarr">⟶</span>
+    <div class="ibox i2" style="--d:.25s"><span class="ii">🌳</span><div class="it">Jira Hierarchy</div><div class="is">Epic+Stories+Task</div></div>
+    <span class="iarr">⟶</span>
+    <div class="ibox i3" style="--d:.35s"><span class="ii">👩‍💻</span><div class="it">Engineer Work</div><div class="is">Subtasks + time logs</div></div>
+    <span class="iarr">⟶</span>
+    <div class="ibox i4" style="--d:.45s"><span class="ii">📊</span><div class="it">Backlog Orch.</div><div class="is">Priority + ranking</div></div>
+    <span class="iarr">⟶</span>
+    <div class="ibox i5" style="--d:.55s"><span class="ii">📅</span><div class="it">WW Dates</div><div class="is">Calculated per story</div></div>
+    <span class="iarr">⟶</span>
+    <div class="ibox i6" style="--d:.65s"><span class="ii">↩️</span><div class="it">HSD Updated</div><div class="is">Done = Yes + dates</div></div>
+  </div>
+  <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 16px;font-size:.74rem;color:white">
+    <span style="font-size:1rem">👆</span> Click the <strong style="color:white;margin:0 4px">Continue →</strong> button to explore each step
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════
+     SECTION 1 — Problem Statement
+════════════════════════════════════════ -->
+<section class="sec" id="s1">
+  <div class="slbl"><span class="sn">⚠</span> Why We Need This</div>
+  <h2>🧩 The Problem: Delivery Tracking Is Broken Today</h2>
+  <p class="sub">Three delivery problems the team faced before this proposal.</p>
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="background:rgba(229,57,53,.1);border:1.5px solid rgba(229,57,53,.38);border-radius:12px;padding:18px 22px;display:flex;gap:16px;align-items:flex-start">
+      <div style="flex-shrink:0;width:38px;height:38px;background:#c62828;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-top:2px">1</div>
+      <div>
+        <div style="font-size:1rem;font-weight:800;margin-bottom:7px;color:#ef9a9a">No readiness visibility across implementation and validation phases</div>
+        <div style="font-size:.82rem;color:white;line-height:1.65">
+          When a feature is marked complete in a single ticket, it's impossible to know <em>at what stage</em> it's actually done. Is it code-complete? Has it been validated on simulation? Did it pass emulation? Without separate stories per phase — CC, IGT, Sim, Emu — one "Done" label could mean anything, and readiness is a guess.
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span style="background:rgba(2,136,209,.2);border:1px solid rgba(2,136,209,.4);border-radius:6px;padding:3px 11px;font-size:.67rem;font-weight:700;color:#81d4fa">Implementation (CC)</span>
+          <span style="color:white;font-size:.8rem;align-self:center">→ invisible</span>
+          <span style="background:rgba(0,137,123,.2);border:1px solid rgba(0,137,123,.4);border-radius:6px;padding:3px 11px;font-size:.67rem;font-weight:700;color:#80cbc4">Validation on Sim</span>
+          <span style="color:white;font-size:.8rem;align-self:center">→ invisible</span>
+          <span style="background:rgba(123,31,162,.2);border:1px solid rgba(123,31,162,.4);border-radius:6px;padding:3px 11px;font-size:.67rem;font-weight:700;color:#ce93d8">Validation on Emu</span>
+          <span style="color:white;font-size:.8rem;align-self:center">→ invisible</span>
+        </div>
+      </div>
+    </div>
+    <div style="background:rgba(245,124,0,.1);border:1.5px solid rgba(245,124,0,.38);border-radius:12px;padding:18px 22px;display:flex;gap:16px;align-items:flex-start">
+      <div style="flex-shrink:0;width:38px;height:38px;background:#e65100;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-top:2px">2</div>
+      <div>
+        <div style="font-size:1rem;font-weight:800;margin-bottom:7px;color:#ffb74d">Unstructured Jira creation drives massive backlog management overhead</div>
+        <div style="font-size:.82rem;color:white;line-height:1.65">
+          Teams create Jira issues inconsistently — no standard naming convention, no parent Epic, no story hierarchy, no effort tags. The backlog accumulates hundreds of disconnected tickets. Prioritisation becomes a manual, error-prone exercise every sprint, and there is no automated mechanism to surface what should be pulled next.
+        </div>
+      </div>
+    </div>
+    <div style="background:rgba(103,58,183,.1);border:1.5px solid rgba(103,58,183,.38);border-radius:12px;padding:18px 22px;display:flex;gap:16px;align-items:flex-start">
+      <div style="flex-shrink:0;width:38px;height:38px;background:#4527a0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-top:2px">3</div>
+      <div>
+        <div style="font-size:1rem;font-weight:800;margin-bottom:7px;color:#ce93d8">Some teams schedule by release version, not by work week</div>
+        <div style="font-size:.82rem;color:white;line-height:1.65">
+          Historically, several teams expressed delivery commitments in terms of release versions — <em>"targets v2.1"</em> — rather than work weeks. This model has its merits: features don't change dramatically week over week, and a monthly release represents a real, tangible milestone where a capability actually works end-to-end rather than a partially integrated state. However, this conflicts with upper management's requirement to track all feature deliveries in WW, creating a persistent translation gap between how teams think and how leadership reports.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════
+     SECTION 2 — What This Proposal Addresses
+════════════════════════════════════════ -->
+<section class="sec" id="s2">
+  <div class="slbl"><span class="sn">✅</span> Scope of This Proposal</div>
+  <h2>🎯 What This Proposal Addresses — And What It Doesn't</h2>
+  <p class="sub">An honest look at what this loop solves — and where it stops short.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div style="background:rgba(67,160,71,.1);border:1.5px solid rgba(67,160,71,.45);border-radius:12px;padding:18px 22px">
+      <div style="font-size:.72rem;font-weight:900;color:#81c784;letter-spacing:.6px;margin-bottom:14px;text-transform:uppercase">✅ Addressed</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:flex-start;gap:11px">
+          <span style="min-width:26px;height:26px;background:#388e3c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;margin-top:1px">✓</span>
+          <div>
+            <div style="font-size:.82rem;font-weight:700;margin-bottom:3px">Unstructured Jira creation</div>
+            <div style="font-size:.72rem;color:white;line-height:1.5">Automated pipeline creates a consistent Epic → Story → Task hierarchy for every HSD feature, with standardised naming, effort estimates, and linking.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:11px">
+          <span style="min-width:26px;height:26px;background:#388e3c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;margin-top:1px">✓</span>
+          <div>
+            <div style="font-size:.82rem;font-weight:700;margin-bottom:3px">Backlog size &amp; management overhead</div>
+            <div style="font-size:.72rem;color:white;line-height:1.5">The Backlog Orchestrator automatically applies priority rules and produces a ranked, actionable backlog — eliminating manual sprint triage and spreadsheet maintenance.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:11px">
+          <span style="min-width:26px;height:26px;background:#388e3c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;margin-top:1px">✓</span>
+          <div>
+            <div style="font-size:.82rem;font-weight:700;margin-bottom:3px">Phase-level readiness visibility</div>
+            <div style="font-size:.72rem;color:white;line-height:1.5">Separate CC, IGT, Sim, and Emu stories per feature give per-phase Done signals, so implementation and validation readiness are independently trackable in real time.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="background:rgba(229,57,53,.08);border:1.5px solid rgba(229,57,53,.38);border-radius:12px;padding:18px 22px;position:relative;overflow:hidden">
+      <!-- funky sorry banner -->
+      <div style="position:absolute;top:14px;right:-28px;background:linear-gradient(135deg,#e53935,#b71c1c);color:white;font-size:.65rem;font-weight:900;padding:5px 40px;transform:rotate(12deg);letter-spacing:.8px;box-shadow:0 2px 10px rgba(229,57,53,.5);z-index:2">😬 SORRY!</div>
+      <div style="font-size:.72rem;font-weight:900;color:#ef9a9a;letter-spacing:.6px;margin-bottom:14px;text-transform:uppercase">❌ Not Addressed</div>
+      <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:12px">
+        <span style="min-width:26px;height:26px;background:#c62828;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;margin-top:1px">✗</span>
+        <div>
+          <div style="font-size:.82rem;font-weight:700;margin-bottom:3px">Scheduling by release version</div>
+          <div style="font-size:.72rem;color:white;line-height:1.5">This proposal doesn't resolve the tension between release-version schedules and WW-based reporting. Upper management mandates WW, so teams that prefer version-based milestones still need to translate — this tool won't change that requirement.</div>
+        </div>
+      </div>
+      <div style="background:rgba(229,57,53,.1);border-radius:8px;padding:10px 14px;font-size:.72rem;color:#ef9a9a;line-height:1.5;border:1px solid rgba(229,57,53,.25)">
+        <strong>Why?</strong> Leadership dashboards, GTM gates, and cross-team dependencies all operate in WW. Introducing release-version timelines alongside WW would create two parallel tracking systems — more overhead, not less.
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:10px;background:rgba(229,57,53,.08);border-radius:8px;padding:10px 14px;border:1px dashed rgba(229,57,53,.4)">
+        <span style="font-size:1.3rem">🙈</span>
+        <span style="font-size:.72rem;color:white;font-style:italic;line-height:1.4">We tried our best. This pain point remains unsolved for now — upper management's WW requirement wins this round.</span>
+        <span style="font-size:1.3rem">🙈</span>
+      </div>
+    </div>
+  </div>
+  <div style="background:rgba(0,113,197,.1);border:1px solid rgba(0,113,197,.3);border-radius:10px;padding:12px 18px;font-size:.78rem;color:white;line-height:1.6;display:flex;align-items:center;gap:12px">
+    <span style="font-size:1.4rem;flex-shrink:0">👉</span>
+    The following steps walk through exactly how the addressed items are solved — one click at a time.
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════
+     SECTION 3 — HSD Database + Scan (was s1)
+════════════════════════════════════════ -->
+<section class="sec" id="s3">
+  <div class="slbl"><span class="sn">01</span> HSD Database · Scanning for KMD Features</div>
+  <h2>🗄️ Every Feature Starts as an HSD Record</h2>
+  <p class="sub">Scans the HSD database for features listing KMD as a SW component with a valid owner and effort. Two values are extracted per matched feature.</p>
+  <div class="tc">
+    <div>
+      <div class="crd" style="padding:0;overflow:hidden">
+        <div class="swrp">
+          <div class="sbeam animate-scan"></div>
+          <table class="ht">
+            <thead><tr><th>HSD ID</th><th>Feature</th><th>KMD Owner</th><th>SW Effort</th></tr></thead>
+            <tbody>
+              <tr><td>4568732</td><td>Telemetry Collection</td><td class="kmv">vwattal</td><td class="kmv">6w</td></tr>
+              <tr><td>4571209</td><td>RAS Error Handling</td><td class="kmv">jsmith</td><td class="kmv">4w</td></tr>
+              <tr class="hl"><td><strong>4583401</strong></td><td><strong>Power Mgmt Improvements</strong></td><td class="kmv">mchen</td><td class="kmv">8w</td></tr>
+              <tr><td>4592104</td><td>Firmware Load Optimisation</td><td class="kmv">rlee</td><td class="kmv">5w</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:.67rem;color:white;padding:0 4px">⬆ Scan beam reads SW Impact tab on each HSD · Highlighted row will become our example</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="crd">
+        <div style="font-size:.62rem;color:white;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Extracted for HSD 4583401</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="background:rgba(0,137,123,.15);border:1px solid rgba(0,137,123,.4);border-radius:8px;padding:10px 13px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:1.3rem">👤</span>
+            <div><div style="font-size:.78rem;font-weight:700">KMD Owner</div><div style="font-size:.9rem;color:#00c7b7;font-weight:700;margin-top:2px">mchen</div></div>
+            <span style="margin-left:auto;font-size:.62rem;color:white">→ Jira assignee</span>
+          </div>
+          <div style="background:rgba(245,124,0,.15);border:1px solid rgba(245,124,0,.4);border-radius:8px;padding:10px 13px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:1.3rem">⏱</span>
+            <div><div style="font-size:.78rem;font-weight:700">SW Effort</div><div style="font-size:.9rem;color:#ffb74d;font-weight:700;margin-top:2px">8 weeks</div></div>
+            <span style="margin-left:auto;font-size:.62rem;color:white">→ drives estimates</span>
+          </div>
+        </div>
+      </div>
+      <div class="crd" style="font-size:.7rem;color:white;line-height:1.6">
+        <div style="font-size:.62rem;color:white;margin-bottom:6px;font-weight:700">✓ VALID ENTRY CRITERIA</div>
+        ✅ Component = KMD in SW Impact or AR tab<br>
+        ✅ Owner field is populated<br>
+        ✅ SW Effort (weeks) &gt; 0<br>
+        ✅ Feature title present on HSD
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════
+     SECTION 2 — Jira Hierarchy + Subtasks + Engineer
+════════════════════════════════════════ -->
+<section class="sec" id="s4">
+  <div class="slbl"><span class="sn">02</span> Jira Creation · Hierarchy + Engineer Work</div>
+  <h2>🌳 Jira Hierarchy Created — Then Engineers Break It Down</h2>
+  <p class="sub">Auto-creates <strong>6 Jira issues</strong> — Story estimates flow from SW Effort. Engineers then manually add sub-tasks to the CC Story, one per work item.</p>
+  <div class="tc">
+    <!-- Left: Tree + effort formula -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="eform">
+        <div class="etitle">Estimate formula · HSD SW Effort = 8 weeks</div>
+        <div class="frow"><span class="fn">CC — Code Completeness</span><div class="fb"><div class="fbi" style="width:75%;background:linear-gradient(90deg,#0288d1,#039be5)"><span>6w (= 8 − 2)</span></div></div><span class="ff">effort−2w</span></div>
+        <div class="frow"><span class="fn">IGT — Integration Testing</span><div class="fb"><div class="fbi" style="width:25%;background:linear-gradient(90deg,#00897b,#00acc1)"><span>2w</span></div></div><span class="ff">fixed</span></div>
+        <div class="frow"><span class="fn">Sim — Simulation</span><div class="fb"><div class="fbi" style="width:25%;background:linear-gradient(90deg,#f57c00,#ffa726)"><span>2w</span></div></div><span class="ff">fixed</span></div>
+        <div class="frow"><span class="fn">Emu — Emulation</span><div class="fb"><div class="fbi" style="width:37%;background:linear-gradient(90deg,#7b1fa2,#ab47bc)"><span>3w</span></div></div><span class="ff">fixed</span></div>
+      </div>
+      <div class="jtree">
+        <details class="epic-toggle">
+        <summary class="tepic">
+          <span class="bl bl-ep">EPIC</span>
+          <span class="tkey">VLK-87101</span>
+          <span class="ttxt">[Epic][JGS] Power Mgmt Improvements</span>
+          <span style="font-size:.62rem;color:white">mchen</span>
+          <span class="etoggle-hint"></span>
+        </summary>
+        <div class="tch">
+          <div class="tstr cc">
+            <span class="bl bl-st">STORY</span>
+            <span class="tkey">VLK-87102</span>
+            <span class="ttxt">[Story][JGS][CC] Power Mgmt Improvements</span>
+            <span class="ech">6w ⏱</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0 5px;margin-top:5px">
+            <div style="height:1px;background:rgba(255,255,255,.09);flex:1"></div>
+            <span style="font-size:.58rem;font-weight:800;letter-spacing:.7px;color:white;text-transform:uppercase;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);padding:3px 12px;border-radius:10px">↳ Sub-tasks · created manually by engineer</span>
+            <div style="height:1px;background:rgba(255,255,255,.09);flex:1"></div>
+          </div>
+          <div class="stch">
+            <div class="srow"><span style="font-size:.52rem;font-weight:800;background:rgba(255,255,255,.1);color:white;padding:1px 5px;border-radius:3px;letter-spacing:.3px;flex-shrink:0;margin-right:3px">SUB</span><div class="av" style="background:#e91e8c">MC</div>Implement PM state machine in i915_gem.c<span class="noest">no est.</span></div>
+            <div class="srow"><span style="font-size:.52rem;font-weight:800;background:rgba(255,255,255,.1);color:white;padding:1px 5px;border-radius:3px;letter-spacing:.3px;flex-shrink:0;margin-right:3px">SUB</span><div class="av" style="background:#0288d1">RK</div>Add sysfs interface for frequency control<span class="noest">no est.</span></div>
+            <div class="srow"><span style="font-size:.52rem;font-weight:800;background:rgba(255,255,255,.1);color:white;padding:1px 5px;border-radius:3px;letter-spacing:.3px;flex-shrink:0;margin-right:3px">SUB</span><div class="av" style="background:#00897b">PL</div>Write kselftest &amp; IGT test stubs<span class="noest">no est.</span></div>
+            <div class="srow"><span style="font-size:.52rem;font-weight:800;background:rgba(255,255,255,.1);color:white;padding:1px 5px;border-radius:3px;letter-spacing:.3px;flex-shrink:0;margin-right:3px">SUB</span><div class="av" style="background:#7b1fa2">MC</div>Code review, docs &amp; patch series prep<span class="noest">no est.</span></div>
+          </div>
+          <div class="tstr igt">
+            <span class="bl bl-igt">STORY</span>
+            <span class="tkey">VLK-87103</span>
+            <span class="ttxt">[Story][JGS][IGT] Power Mgmt Improvements</span>
+            <span class="ech">2w ⏱</span>
+          </div>
+          <div class="tstr sim">
+            <span class="bl bl-sim">STORY</span>
+            <span class="tkey">VLK-87104</span>
+            <span class="ttxt">[Story][JGS][Sim] Power Mgmt Improvements</span>
+            <span class="ech">2w ⏱</span>
+          </div>
+          <div class="tstr emu">
+            <span class="bl bl-emu">STORY</span>
+            <span class="tkey">VLK-87105</span>
+            <span class="ttxt">[Story][JGS][Emu] Power Mgmt Improvements</span>
+            <span class="ech">3w ⏱</span>
+          </div>
+          <div class="ttsk">
+            <span class="bl bl-tk">TASK</span>
+            <span class="tkey">VLK-87106</span>
+            <span class="ttxt">[Task][JGS][Upstream] Power Mgmt Improvements</span>
+            <span class="ech" style="color:white">no est.</span>
+          </div>
+        </div>
+        </details>
+      </div>
+    </div>
+    <!-- Right: Engineers SVG creating subtasks -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+      <div style="display:flex;gap:8px;justify-content:center;align-items:flex-start">
+
+        <!-- Engineer 1: Meera (Lead) -->
+        <div class="eng-wrap" style="padding:6px">
+          <div class="bubble animate-float" id="b2" style="font-size:.65rem;max-width:140px">
+            Adding sub-tasks to the<br>CC story! 📝
+          </div>
+          <svg viewBox="0 0 200 230" width="140" height="160" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="162" width="190" height="7" rx="3" fill="#c8a96e"/>
+            <rect x="10" y="169" width="11" height="55" rx="2" fill="#b8895a"/>
+            <rect x="179" y="169" width="11" height="55" rx="2" fill="#b8895a"/>
+            <rect x="48" y="153" width="104" height="11" rx="3" fill="#424242"/>
+            <rect x="52" y="80" width="96" height="76" rx="4" fill="#2a2a2a"/>
+            <rect x="56" y="84" width="88" height="68" rx="2" fill="#0a1929"/>
+            <rect x="60" y="88" width="28" height="4" rx="2" fill="#7b1fa2" opacity=".9"/>
+            <rect x="60" y="96" width="75" height="2.5" rx="1.2" fill="rgba(2,136,209,.8)"/>
+            <rect x="66" y="102" width="65" height="2" rx="1" fill="rgba(255,255,255,.3)"/>
+            <rect x="66" y="107" width="60" height="2" rx="1" fill="rgba(255,255,255,.25)"/>
+            <rect x="66" y="112" width="65" height="2" rx="1" fill="rgba(0,137,123,.6)"/>
+            <rect x="66" y="117" width="55" height="2" rx="1" fill="rgba(245,124,0,.6)"/>
+            <rect x="66" y="122" width="60" height="2" rx="1" fill="rgba(123,31,162,.6)"/>
+            <rect x="66" y="127" width="50" height="2" rx="1" fill="rgba(67,160,71,.6)"/>
+            <rect id="eng-cursor" x="60" y="133" width="3" height="7" rx="1" fill="rgba(0,200,255,.9)"/>
+            <rect x="72" y="178" width="56" height="8" rx="4" fill="#6d4c41"/>
+            <rect x="90" y="186" width="20" height="38" rx="3" fill="#6d4c41"/>
+            <rect x="74" y="221" width="52" height="5" rx="2.5" fill="#6d4c41"/>
+            <path d="M58,163 L65,128 Q100,133 135,128 L142,163 Z" fill="#e91e8c"/>
+            <path d="M65,142 Q50,146 47,155" stroke="#f0c490" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <path d="M135,142 Q150,146 153,155" stroke="#f0c490" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <ellipse cx="42" cy="157" rx="9" ry="6" fill="#f0c490"/>
+            <ellipse cx="158" cy="157" rx="9" ry="6" fill="#f0c490"/>
+            <rect x="92" y="116" width="16" height="16" rx="5" fill="#f0c490"/>
+            <circle cx="100" cy="98" r="24" fill="#f0c490"/>
+            <path d="M76,98 Q76,72 100,68 Q124,72 124,98" fill="#1a0a00"/>
+            <path d="M76,98 Q70,108 72,120" stroke="#1a0a00" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <circle cx="100" cy="67" r="10" fill="#1a0a00"/>
+            <circle cx="100" cy="65" r="6" fill="#c2185b"/>
+            <circle cx="100" cy="65" r="4" fill="#1a0a00"/>
+            <ellipse cx="76" cy="100" rx="5" ry="6.5" fill="#dda880"/>
+            <ellipse cx="91" cy="97" rx="5" ry="5.5" fill="white"/>
+            <ellipse cx="109" cy="97" rx="5" ry="5.5" fill="white"/>
+            <circle cx="92" cy="98" r="3.5" fill="#1a0a00"/>
+            <circle cx="110" cy="98" r="3.5" fill="#1a0a00"/>
+            <circle cx="93" cy="96" r="1.3" fill="white" opacity=".7"/>
+            <circle cx="111" cy="96" r="1.3" fill="white" opacity=".7"/>
+            <path d="M85,90 Q91,87 97,89" stroke="#1a0a00" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M103,89 Q109,87 115,90" stroke="#1a0a00" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M89,106 Q100,114 111,106" stroke="#c07858" stroke-width="2.5" fill="rgba(255,200,180,.3)" stroke-linecap="round"/>
+            <circle cx="100" cy="102" r="1.5" fill="rgba(160,80,50,.25)"/>
+          </svg>
+          <div class="eng-role">Lead Engineer</div>
+        </div>
+
+        <!-- Engineer 2: Raj (male, darker skin) -->
+        <div class="eng-wrap" style="padding:6px">
+          <div class="bubble animate-float" id="b2b" style="font-size:.65rem;max-width:140px;animation-delay:.6s">
+            Splitting into<br>sub-tasks! ✂️
+          </div>
+          <svg viewBox="0 0 200 230" width="140" height="160" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="162" width="190" height="7" rx="3" fill="#c8a96e"/>
+            <rect x="10" y="169" width="11" height="55" rx="2" fill="#b8895a"/>
+            <rect x="179" y="169" width="11" height="55" rx="2" fill="#b8895a"/>
+            <rect x="48" y="153" width="104" height="11" rx="3" fill="#424242"/>
+            <rect x="52" y="80" width="96" height="76" rx="4" fill="#2a2a2a"/>
+            <rect x="56" y="84" width="88" height="68" rx="2" fill="#0a1929"/>
+            <rect x="60" y="88" width="32" height="4" rx="2" fill="#0288d1" opacity=".9"/>
+            <rect x="60" y="96" width="70" height="2.5" rx="1.2" fill="rgba(2,136,209,.8)"/>
+            <rect x="66" y="102" width="68" height="2" rx="1" fill="rgba(255,255,255,.3)"/>
+            <rect x="66" y="107" width="58" height="2" rx="1" fill="rgba(255,255,255,.25)"/>
+            <rect x="66" y="112" width="63" height="2" rx="1" fill="rgba(0,137,123,.6)"/>
+            <rect x="66" y="117" width="52" height="2" rx="1" fill="rgba(245,124,0,.6)"/>
+            <rect x="66" y="122" width="60" height="2" rx="1" fill="rgba(123,31,162,.6)"/>
+            <rect x="66" y="127" width="48" height="2" rx="1" fill="rgba(67,160,71,.6)"/>
+            <rect x="72" y="178" width="56" height="8" rx="4" fill="#5d4037"/>
+            <rect x="90" y="186" width="20" height="38" rx="3" fill="#5d4037"/>
+            <rect x="74" y="221" width="52" height="5" rx="2.5" fill="#5d4037"/>
+            <!-- body: blue shirt -->
+            <path d="M58,163 L65,128 Q100,133 135,128 L142,163 Z" fill="#1565c0"/>
+            <!-- arms -->
+            <path d="M65,142 Q50,146 47,155" stroke="#c68642" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <path d="M135,142 Q150,146 153,155" stroke="#c68642" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <ellipse cx="42" cy="157" rx="9" ry="6" fill="#c68642"/>
+            <ellipse cx="158" cy="157" rx="9" ry="6" fill="#c68642"/>
+            <!-- neck -->
+            <rect x="92" y="116" width="16" height="16" rx="5" fill="#c68642"/>
+            <!-- head -->
+            <circle cx="100" cy="98" r="24" fill="#c68642"/>
+            <!-- short dark hair -->
+            <path d="M76,98 Q76,70 100,67 Q124,70 124,98" fill="#0d0d0d"/>
+            <ellipse cx="100" cy="70" rx="22" ry="8" fill="#0d0d0d"/>
+            <!-- ears -->
+            <ellipse cx="76" cy="100" rx="5" ry="6.5" fill="#b57a3a"/>
+            <ellipse cx="124" cy="100" rx="5" ry="6.5" fill="#b57a3a"/>
+            <!-- eyes -->
+            <ellipse cx="91" cy="97" rx="5" ry="5.5" fill="white"/>
+            <ellipse cx="109" cy="97" rx="5" ry="5.5" fill="white"/>
+            <circle cx="92" cy="98" r="3.5" fill="#1a0a00"/>
+            <circle cx="110" cy="98" r="3.5" fill="#1a0a00"/>
+            <circle cx="93" cy="96" r="1.3" fill="white" opacity=".7"/>
+            <circle cx="111" cy="96" r="1.3" fill="white" opacity=".7"/>
+            <!-- brows -->
+            <path d="M85,90 Q91,88 97,90" stroke="#0d0d0d" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <path d="M103,90 Q109,88 115,90" stroke="#0d0d0d" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <!-- smile -->
+            <path d="M89,106 Q100,113 111,106" stroke="#8a5230" stroke-width="2.5" fill="rgba(200,160,120,.3)" stroke-linecap="round"/>
+            <circle cx="100" cy="102" r="1.5" fill="rgba(120,60,20,.3)"/>
+          </svg>
+          <div class="eng-role">Engineer</div>
+        </div>
+
+        <!-- Engineer 3: Sam (male, lighter skin, glasses) -->
+        <div class="eng-wrap" style="padding:6px">
+          <div class="bubble animate-float" id="b2c" style="font-size:.65rem;max-width:140px;animation-delay:1.2s">
+            Adding my items<br>to the story! 💻
+          </div>
+          <svg viewBox="0 0 200 230" width="140" height="160" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="162" width="190" height="7" rx="3" fill="#c8a96e"/>
+            <rect x="10" y="169" width="11" height="55" rx="2" fill="#b8895a"/>
+            <rect x="179" y="169" width="11" height="55" rx="2" fill="#b8895a"/>
+            <rect x="48" y="153" width="104" height="11" rx="3" fill="#424242"/>
+            <rect x="52" y="80" width="96" height="76" rx="4" fill="#2a2a2a"/>
+            <rect x="56" y="84" width="88" height="68" rx="2" fill="#0a1929"/>
+            <rect x="60" y="88" width="30" height="4" rx="2" fill="#388e3c" opacity=".9"/>
+            <rect x="60" y="96" width="72" height="2.5" rx="1.2" fill="rgba(2,136,209,.8)"/>
+            <rect x="66" y="102" width="62" height="2" rx="1" fill="rgba(255,255,255,.3)"/>
+            <rect x="66" y="107" width="57" height="2" rx="1" fill="rgba(255,255,255,.25)"/>
+            <rect x="66" y="112" width="64" height="2" rx="1" fill="rgba(0,137,123,.6)"/>
+            <rect x="66" y="117" width="53" height="2" rx="1" fill="rgba(245,124,0,.6)"/>
+            <rect x="66" y="122" width="61" height="2" rx="1" fill="rgba(123,31,162,.6)"/>
+            <rect x="66" y="127" width="49" height="2" rx="1" fill="rgba(67,160,71,.6)"/>
+            <rect x="72" y="178" width="56" height="8" rx="4" fill="#4e342e"/>
+            <rect x="90" y="186" width="20" height="38" rx="3" fill="#4e342e"/>
+            <rect x="74" y="221" width="52" height="5" rx="2.5" fill="#4e342e"/>
+            <!-- body: green shirt -->
+            <path d="M58,163 L65,128 Q100,133 135,128 L142,163 Z" fill="#2e7d32"/>
+            <!-- arms -->
+            <path d="M65,142 Q50,146 47,155" stroke="#f5cba7" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <path d="M135,142 Q150,146 153,155" stroke="#f5cba7" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <ellipse cx="42" cy="157" rx="9" ry="6" fill="#f5cba7"/>
+            <ellipse cx="158" cy="157" rx="9" ry="6" fill="#f5cba7"/>
+            <!-- neck -->
+            <rect x="92" y="116" width="16" height="16" rx="5" fill="#f5cba7"/>
+            <!-- head -->
+            <circle cx="100" cy="98" r="24" fill="#f5cba7"/>
+            <!-- medium brown hair, side part -->
+            <path d="M76,98 Q76,72 100,68 Q124,72 124,98" fill="#5d3317"/>
+            <path d="M76,96 Q74,86 80,78 Q90,68 100,68" fill="#5d3317"/>
+            <ellipse cx="76" cy="100" rx="5" ry="6.5" fill="#e8b48a"/>
+            <ellipse cx="124" cy="100" rx="5" ry="6.5" fill="#e8b48a"/>
+            <!-- eyes -->
+            <ellipse cx="91" cy="97" rx="5" ry="5.5" fill="white"/>
+            <ellipse cx="109" cy="97" rx="5" ry="5.5" fill="white"/>
+            <circle cx="92" cy="98" r="3.5" fill="#1a3a6a"/>
+            <circle cx="110" cy="98" r="3.5" fill="#1a3a6a"/>
+            <circle cx="93" cy="96" r="1.3" fill="white" opacity=".7"/>
+            <circle cx="111" cy="96" r="1.3" fill="white" opacity=".7"/>
+            <!-- glasses -->
+            <rect x="82" y="91" width="18" height="13" rx="5" fill="none" stroke="#333" stroke-width="2.2"/>
+            <rect x="100" y="91" width="18" height="13" rx="5" fill="none" stroke="#333" stroke-width="2.2"/>
+            <line x1="100" y1="97" x2="100" y2="97" stroke="#333" stroke-width="2"/>
+            <path d="M82,97 Q79,96 77,98" stroke="#333" stroke-width="1.8" fill="none"/>
+            <path d="M118,97 Q121,96 123,98" stroke="#333" stroke-width="1.8" fill="none"/>
+            <!-- brows -->
+            <path d="M84,89 Q91,87 97,89" stroke="#5d3317" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M103,89 Q109,87 115,89" stroke="#5d3317" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <!-- smile -->
+            <path d="M89,106 Q100,113 111,106" stroke="#b07850" stroke-width="2.5" fill="rgba(240,190,160,.3)" stroke-linecap="round"/>
+            <circle cx="100" cy="102" r="1.5" fill="rgba(140,80,40,.2)"/>
+          </svg>
+          <div class="eng-role">Engineer</div>
+        </div>
+
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:8px 14px;font-size:.67rem;color:white;text-align:center;line-height:1.5">
+        Sub-tasks created manually by any team engineer<br>
+        <span style="color:rgba(255,255,255,.6)">No time estimates here — only on the parent CC Story</span>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:center;margin-top:24px">
+    <a href="http://10.88.27.190:8888/hsd2jira" target="_blank"
+       style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+              background:linear-gradient(135deg,#0071c5,#00897b);border-radius:12px;padding:16px 28px;
+              text-decoration:none;color:white;font-weight:900;font-size:.88rem;letter-spacing:.3px;
+              box-shadow:0 6px 28px rgba(0,113,197,.45);border:1.5px solid rgba(255,255,255,.2);
+              transition:transform .15s,box-shadow .15s;
+              animation:glowP 2.2s ease-in-out infinite"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 36px rgba(0,113,197,.65)'"
+       onmouseout="this.style.transform='';this.style.boxShadow='0 6px 28px rgba(0,113,197,.45)'">
+      <span style="font-size:1.6rem">🚀</span>
+      <span>Click Me — Live Demo</span>
+      <span style="font-size:.67rem;font-weight:600;opacity:.8">HSD → Jira creator</span>
+    </a>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════
+     SECTION 3 — Lead Engineer weekly logging
+════════════════════════════════════════ -->
+<section class="sec" id="s5">
+  <div class="slbl"><span class="sn">03</span> Weekly Time Tracking · Lead Engineer's Responsibility</div>
+  <h2>📅 Meera Logs the Team's Hours Every Friday</h2>
+  <p class="sub">Every Friday the <strong>lead engineer</strong> logs total team hours on the <strong>CC Story</strong> — keeping Jira's projected end date accurate. Stale logging = wrong dates on every PM dashboard.</p>
+  <div class="tc flip">
+    <!-- Left: Engineer logging -->
+    <div class="eng-wrap" style="padding:0">
+      <div class="bubble animate-float" id="b3" style="max-width:210px">
+        "Team burnt 28h this week —<br>logging it now on VLK-87102" 💻
+      </div>
+      <svg viewBox="0 0 200 230" width="200" height="230" xmlns="http://www.w3.org/2000/svg">
+        <!-- same desk setup -->
+        <rect x="5" y="162" width="190" height="7" rx="3" fill="#c8a96e"/>
+        <rect x="10" y="169" width="11" height="55" rx="2" fill="#b8895a"/>
+        <rect x="179" y="169" width="11" height="55" rx="2" fill="#b8895a"/>
+        <rect x="48" y="153" width="104" height="11" rx="3" fill="#424242"/>
+        <rect x="52" y="80" width="96" height="76" rx="4" fill="#2a2a2a"/>
+        <rect x="56" y="84" width="88" height="68" rx="2" fill="#0a1929"/>
+        <!-- time log screen content -->
+        <rect x="60" y="88" width="50" height="4" rx="1.5" fill="rgba(0,200,255,.8)"/>
+        <rect x="60" y="96" width="78" height="3" rx="1.5" fill="rgba(2,136,209,.7)"/>
+        <!-- WW bars on screen -->
+        <rect x="60" y="104" width="12" height="2" rx="1" fill="rgba(255,255,255,.4)"/>
+        <rect x="76" y="103" width="40" height="4" rx="2" fill="rgba(0,113,197,.7)"/>
+        <rect x="60" y="111" width="12" height="2" rx="1" fill="rgba(255,255,255,.4)"/>
+        <rect x="76" y="110" width="28" height="4" rx="2" fill="rgba(0,113,197,.7)"/>
+        <rect x="60" y="118" width="12" height="2" rx="1" fill="rgba(255,255,255,.4)"/>
+        <rect x="76" y="117" width="48" height="4" rx="2" fill="rgba(0,113,197,.7)"/>
+        <rect x="60" y="125" width="12" height="2" rx="1" fill="rgba(255,255,255,.4)"/>
+        <rect x="76" y="124" width="22" height="4" rx="2" fill="rgba(0,200,255,.5)"/>
+        <rect id="eng-cursor" x="98" y="123" width="3" height="7" rx="1" fill="rgba(0,200,255,.9)"/>
+        <rect x="72" y="178" width="56" height="8" rx="4" fill="#6d4c41"/>
+        <rect x="90" y="186" width="20" height="38" rx="3" fill="#6d4c41"/>
+        <rect x="74" y="221" width="52" height="5" rx="2.5" fill="#6d4c41"/>
+        <path d="M58,163 L65,128 Q100,133 135,128 L142,163 Z" fill="#c2185b"/>
+        <path d="M65,142 Q50,146 47,155" stroke="#f0c490" stroke-width="10" fill="none" stroke-linecap="round"/>
+        <path d="M135,142 Q150,146 153,155" stroke="#f0c490" stroke-width="10" fill="none" stroke-linecap="round"/>
+        <ellipse cx="42" cy="157" rx="9" ry="6" fill="#f0c490"/>
+        <ellipse cx="158" cy="157" rx="9" ry="6" fill="#f0c490"/>
+        <rect x="92" y="116" width="16" height="16" rx="5" fill="#f0c490"/>
+        <circle cx="100" cy="98" r="24" fill="#f0c490"/>
+        <path d="M76,98 Q76,72 100,68 Q124,72 124,98" fill="#1a0a00"/>
+        <path d="M76,98 Q70,108 72,120" stroke="#1a0a00" stroke-width="8" fill="none" stroke-linecap="round"/>
+        <circle cx="100" cy="67" r="10" fill="#1a0a00"/>
+        <circle cx="100" cy="65" r="6" fill="#c2185b"/>
+        <circle cx="100" cy="65" r="4" fill="#1a0a00"/>
+        <ellipse cx="76" cy="100" rx="5" ry="6.5" fill="#dda880"/>
+        <!-- focused/concentrated eyes (slight squint) -->
+        <ellipse cx="91" cy="97" rx="5" ry="4" fill="white"/>
+        <ellipse cx="109" cy="97" rx="5" ry="4" fill="white"/>
+        <circle cx="92" cy="98" r="3.2" fill="#1a0a00"/>
+        <circle cx="110" cy="98" r="3.2" fill="#1a0a00"/>
+        <circle cx="93" cy="96.5" r="1.2" fill="white" opacity=".7"/>
+        <circle cx="111" cy="96.5" r="1.2" fill="white" opacity=".7"/>
+        <!-- focused brows (slightly furrowed) -->
+        <path d="M85,91 Q91,89 97,91" stroke="#1a0a00" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M103,91 Q109,89 115,91" stroke="#1a0a00" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <!-- subtle smile -->
+        <path d="M92,106 Q100,110 108,106" stroke="#c07858" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <circle cx="100" cy="102" r="1.5" fill="rgba(160,80,50,.25)"/>
+      </svg>
+      <div class="eng-name">Meera Chen (mchen)</div>
+      <div class="eng-role">KMD Lead Engineer · VLK-87102 CC Owner</div>
+    </div>
+    <!-- Right: time log bars -->
+    <div>
+      <div class="crd" style="margin-bottom:12px">
+        <div style="font-size:.62rem;color:white;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">VLK-87102 · CC Story · Weekly Time Log</div>
+        <div class="wkrow">
+          <span class="wklbl">WW10</span>
+          <div class="wkbg"><div class="wkfill" style="width:80%;background:linear-gradient(90deg,#0071c5,#0288d1)"><span>32h logged</span></div></div>
+          <span class="wkst" style="color:#43a047">✓ done</span>
+        </div>
+        <div class="wkrow">
+          <span class="wklbl">WW11</span>
+          <div class="wkbg"><div class="wkfill" style="width:55%;background:linear-gradient(90deg,#0071c5,#0288d1)"><span>22h logged</span></div></div>
+          <span class="wkst" style="color:#43a047">✓ done</span>
+        </div>
+        <div class="wkrow">
+          <span class="wklbl">WW12</span>
+          <div class="wkbg"><div class="wkfill" style="width:70%;background:linear-gradient(90deg,#0071c5,#0288d1)"><span>28h logged</span></div></div>
+          <span class="wkst" style="color:#43a047">✓ done</span>
+        </div>
+        <div class="wkrow">
+          <span class="wklbl">WW13</span>
+          <div class="wkbg"><div class="wkfill" style="width:27%;background:linear-gradient(90deg,#f57c00,#ffa726)"><span>11h so far</span></div></div>
+          <span class="wkst" style="color:#f57c00">⏳ active</span>
+        </div>
+        <div style="margin-top:10px;background:rgba(67,160,71,.1);border-radius:6px;padding:8px 11px;font-size:.67rem;color:#81c784">
+          🕒 Jira recalculates projected ETA from (original estimate − total logged hours)
+        </div>
+      </div>
+      <div class="crd" style="border-left:3px solid var(--rd)">
+        <div style="font-size:.68rem;font-weight:700;margin-bottom:7px;color:#ef9a9a">⚠ If Logging Stops</div>
+        <div style="font-size:.68rem;color:white;line-height:1.6">
+          Remaining estimate stays frozen → ETA drifts → PM dashboard shows wrong completion dates → sprint planning breaks down.<br>
+          <strong style="color:white">Even partial hours matter.</strong>
+        </div>
+      </div>
+      <div class="crd" style="margin-top:10px;border-left:3px solid #0288d1">
+        <div style="font-size:.68rem;font-weight:700;margin-bottom:6px">Blocker? Link on the CC Story</div>
+        <div style="font-size:.68rem;color:white;line-height:1.6">
+          If a sub-task is blocked, add a <strong style="color:white">"is blocked by"</strong> link on the parent CC Story — not on the sub-task. This surfaces in all JQL filters and sprint boards.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════
+     SECTION 4 — Backlog Orchestrator
+════════════════════════════════════════ -->
+<section class="sec" id="s6">
+  <div class="slbl"><span class="sn">04</span> Backlog Orchestrator · Priority &amp; Ranking</div>
+  <h2>📊 Backlog Orchestrator — Priority-Driven Ranking</h2>
+  <p class="sub">All <strong>Stories &amp; Bugs</strong> are fetched from the Rapid Board and ranked by Jira priority field — <strong style="color:#ef5350">P1</strong> · <strong style="color:#ff9800">P2</strong> · <strong style="color:#66bb6a">P3</strong> · <strong style="color:#90a4ae">P4</strong> — then sub-sorted within each bucket by dependency state and effort. The final order can be pushed back to Jira in one click.</p>
+
+  <div class="tc eq" style="align-items:flex-start;gap:24px">
+    <div style="flex:1">
+      <div style="font-size:.68rem;color:white;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Sub-sort within each bucket</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:rgba(229,57,53,.13);border:1px solid rgba(229,57,53,.38);border-radius:8px;padding:9px 13px;display:flex;align-items:flex-start;gap:10px;font-size:.74rem">
+          <span style="min-width:23px;height:23px;background:#c62828;border-radius:50%;font-size:.65rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
+          <div><div style="font-weight:800">🔗 Blocking another Jira — do first</div><div style="font-size:.63rem;color:white;margin-top:2px">Unblocks other teams immediately</div></div>
+        </div>
+        <div style="background:rgba(76,175,80,.11);border:1px solid rgba(76,175,80,.32);border-radius:8px;padding:9px 13px;display:flex;align-items:flex-start;gap:10px;font-size:.74rem">
+          <span style="min-width:23px;height:23px;background:#388e3c;border-radius:50%;font-size:.65rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
+          <div><div style="font-weight:800">⬜ No dependencies — effort ↑</div><div style="font-size:.63rem;color:white;margin-top:2px">Clean quick wins, lowest effort first</div></div>
+        </div>
+        <div style="background:rgba(255,193,7,.09);border:1px solid rgba(255,193,7,.28);border-radius:8px;padding:9px 13px;display:flex;align-items:flex-start;gap:10px;font-size:.74rem">
+          <span style="min-width:23px;height:23px;background:#f9a825;border-radius:50%;font-size:.65rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</span>
+          <div><div style="font-weight:800">⏳ Blocked by external — effort ↑</div><div style="font-size:.63rem;color:white;margin-top:2px">Prep while waiting, ordered by effort</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:.68rem;color:white;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Example Output</div>
+      <div class="blit p1"><span class="pbadge p1">P1·1</span><span style="font-size:.62rem;background:rgba(229,57,53,.2);color:#ef9a9a;padding:1px 7px;border-radius:4px;white-space:nowrap">🔗 blocker</span><span class="blkey">KMD-8711</span><span style="flex:1;font-size:.7rem">RAS Error Handling</span><span style="font-size:.6rem;color:white">4w</span></div>
+      <div class="blit p1"><span class="pbadge p1">P1·2</span><span style="font-size:.62rem;background:rgba(76,175,80,.2);color:#a5d6a7;padding:1px 7px;border-radius:4px;white-space:nowrap">⬜ no-dep</span><span class="blkey">KMD-8719</span><span style="flex:1;font-size:.7rem">Interrupt coalescing</span><span style="font-size:.6rem;color:white">3w</span></div>
+      <div class="blit p2"><span class="pbadge p2">P2·1</span><span style="font-size:.62rem;background:rgba(229,57,53,.2);color:#ef9a9a;padding:1px 7px;border-radius:4px;white-space:nowrap">🔗 blocker</span><span class="blkey">KMD-8701</span><span style="flex:1;font-size:.7rem">Power Mgmt (blocks FW)</span><span style="font-size:.6rem;color:white">8w</span></div>
+      <div class="blit p4"><span class="pbadge p4">P4·1</span><span style="font-size:.62rem;background:rgba(255,193,7,.18);color:#ffe082;padding:1px 7px;border-radius:4px;white-space:nowrap">⏳ ext-dep</span><span class="blkey">KMD-8723</span><span style="flex:1;font-size:.7rem">Display pipeline</span><span style="font-size:.6rem;color:white">7w</span></div>
+      <a href="http://10.88.27.190:8888/backlog-orchestrator" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:10px 20px;border-radius:8px;background:rgba(0,199,183,.12);border:1px solid rgba(0,199,183,.4);color:#00c7b7;font-size:.78rem;font-weight:800;text-decoration:none;letter-spacing:.3px;align-self:flex-start;transition:background .2s" onmouseover="this.style.background='rgba(0,199,183,.22)'" onmouseout="this.style.background='rgba(0,199,183,.12)'">
+        🚀 Live Demo &nbsp;—&nbsp; Backlog Orchestrator
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SECTION 5 — WW Dates + HSD Writeback
+════════════════════════════════════════ -->
+<section class="sec" id="s7">
+  <div class="slbl"><span class="sn">07</span> Weekly HSD Sync · Done Writeback</div>
+  <h2>📅 Jira Trend WW → Pushed to HSD Weekly → Loop Closes on Done</h2>
+  <p class="sub">Two automated flows keep HSD in sync: Friday time-log sync and a Done writeback that triggers when CC + IGT are both complete.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+    <!-- Drawing 1: Weekly sync -->
+    <div class="crd" style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 20px">
+      <div style="font-size:.65rem;font-weight:900;color:rgba(0,200,255,.8);text-transform:uppercase;letter-spacing:.7px">🔄 Every Friday — Trend WW → HSD</div>
+      <svg viewBox="0 0 260 200" width="100%" style="max-width:280px" xmlns="http://www.w3.org/2000/svg">
+        <!-- Jira card -->
+        <rect x="8" y="20" width="104" height="84" rx="8" fill="#0a1929" stroke="rgba(2,136,209,.6)" stroke-width="1.5"/>
+        <rect x="14" y="28" width="40" height="6" rx="3" fill="#0288d1"/>
+        <rect x="58" y="28" width="46" height="6" rx="3" fill="rgba(255,255,255,.15)"/>
+        <rect x="14" y="40" width="88" height="4" rx="2" fill="rgba(255,255,255,.2)"/>
+        <rect x="14" y="49" width="70" height="4" rx="2" fill="rgba(255,255,255,.14)"/>
+        <!-- Trend WW highlight box -->
+        <rect x="12" y="62" width="88" height="30" rx="5" fill="rgba(0,180,255,.15)" stroke="rgba(0,200,255,.5)" stroke-width="1.2"/>
+        <text x="56" y="74" text-anchor="middle" font-size="7.5" fill="rgba(0,200,255,.75)" font-family="Nunito,sans-serif" font-weight="800" letter-spacing="0.3">TREND WW</text>
+        <text x="56" y="86" text-anchor="middle" font-size="12" fill="#64dfff" font-family="Nunito,sans-serif" font-weight="900">26WW14</text>
+        <text x="60" y="118" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.5)" font-family="Nunito,sans-serif">Jira CC Story</text>
+        <!-- Arrow -->
+        <path d="M115,62 L145,62" stroke="#00c7b7" stroke-width="2" marker-end="url(#arr1)"/>
+        <text x="130" y="56" text-anchor="middle" font-size="7" fill="#00c7b7" font-family="Nunito,sans-serif" font-weight="700">every Friday</text>
+        <defs>
+          <marker id="arr1" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+            <polygon points="0 0, 7 3.5, 0 7" fill="#00c7b7"/>
+          </marker>
+        </defs>
+        <!-- HSD card -->
+        <rect x="148" y="20" width="104" height="84" rx="8" fill="#0a1929" stroke="rgba(0,197,183,.5)" stroke-width="1.5"/>
+        <rect x="154" y="28" width="55" height="6" rx="3" fill="rgba(0,197,183,.5)"/>
+        <text x="159" y="42" font-size="7" fill="rgba(255,255,255,.4)" font-family="Nunito,sans-serif">KMD Owner</text>
+        <text x="220" y="42" font-size="7" fill="rgba(255,255,255,.7)" font-family="Nunito,sans-serif">mchen</text>
+        <text x="159" y="53" font-size="7" fill="rgba(255,255,255,.4)" font-family="Nunito,sans-serif">SW Effort</text>
+        <text x="220" y="53" font-size="7" fill="rgba(255,255,255,.7)" font-family="Nunito,sans-serif">8w</text>
+        <rect x="152" y="60" width="96" height="32" rx="5" fill="rgba(0,180,255,.12)" stroke="rgba(0,200,255,.45)" stroke-width="1.2"/>
+        <text x="200" y="73" text-anchor="middle" font-size="7" fill="rgba(0,200,255,.7)" font-family="Nunito,sans-serif" font-weight="800">CC WW (updated)</text>
+        <text x="200" y="85" text-anchor="middle" font-size="12" fill="#64dfff" font-family="Nunito,sans-serif" font-weight="900">26WW14</text>
+        <text x="200" y="118" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.5)" font-family="Nunito,sans-serif">HSD SW Impact tab</text>
+        <text x="130" y="150" text-anchor="middle" font-size="7.5" fill="rgba(255,255,255,.5)" font-family="Nunito,sans-serif">PM dashboards always show latest projected date</text>
+      </svg>
+      <div style="font-size:.73rem;color:white;text-align:center;line-height:1.55;max-width:240px">
+        Tool reads the <strong style="color:#64dfff">Trend WW</strong> field from the CC Story and writes it to the HSD SW Impact tab every week — so projected dates are never stale.
+      </div>
+    </div>
+
+    <!-- Drawing 2: Done writeback -->
+    <div class="crd" style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 20px">
+      <div style="font-size:.65rem;font-weight:900;color:rgba(67,160,71,.9);text-transform:uppercase;letter-spacing:.7px">✅ CC &amp; IGT Done → KMD Done = Yes</div>
+      <svg viewBox="0 0 260 200" width="100%" style="max-width:280px" xmlns="http://www.w3.org/2000/svg">
+        <!-- CC story done -->
+        <rect x="8" y="18" width="110" height="36" rx="7" fill="rgba(2,136,209,.15)" stroke="rgba(67,160,71,.7)" stroke-width="1.5"/>
+        <rect x="14" y="24" width="28" height="6" rx="3" fill="#0288d1"/>
+        <text x="47" y="30" font-size="7" fill="rgba(255,255,255,.6)" font-family="Nunito,sans-serif">VLK-87102 CC</text>
+        <rect x="14" y="35" width="60" height="4" rx="2" fill="rgba(255,255,255,.15)"/>
+        <text x="86" y="43" font-size="9" fill="#81c784" font-family="Nunito,sans-serif" font-weight="900">✓ Done</text>
+        <!-- IGT story done -->
+        <rect x="8" y="60" width="110" height="36" rx="7" fill="rgba(0,137,123,.15)" stroke="rgba(67,160,71,.7)" stroke-width="1.5"/>
+        <rect x="14" y="66" width="28" height="6" rx="3" fill="#00897b"/>
+        <text x="47" y="72" font-size="7" fill="rgba(255,255,255,.6)" font-family="Nunito,sans-serif">VLK-87103 IGT</text>
+        <rect x="14" y="77" width="55" height="4" rx="2" fill="rgba(255,255,255,.15)"/>
+        <text x="86" y="85" font-size="9" fill="#81c784" font-family="Nunito,sans-serif" font-weight="900">✓ Done</text>
+        <!-- AND gate -->
+        <text x="63" y="108" text-anchor="middle" font-size="7.5" fill="rgba(255,255,255,.4)" font-family="Nunito,sans-serif">both done?</text>
+        <path d="M63,113 L63,126" stroke="rgba(67,160,71,.6)" stroke-width="1.5"/>
+        <!-- Arrow to HSD -->
+        <path d="M130,84 L156,84" stroke="#43a047" stroke-width="2" marker-end="url(#arr2)"/>
+        <text x="143" y="78" text-anchor="middle" font-size="7" fill="#81c784" font-family="Nunito,sans-serif" font-weight="700">trigger</text>
+        <defs>
+          <marker id="arr2" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+            <polygon points="0 0, 7 3.5, 0 7" fill="#43a047"/>
+          </marker>
+        </defs>
+        <!-- HSD KMD tab after -->
+        <rect x="148" y="28" width="104" height="112" rx="8" fill="#0a1929" stroke="rgba(67,160,71,.6)" stroke-width="1.8"/>
+        <rect x="154" y="36" width="60" height="6" rx="3" fill="rgba(0,137,123,.6)"/>
+        <text x="183" y="46" text-anchor="middle" font-size="6.5" fill="rgba(255,255,255,.35)" font-family="Nunito,sans-serif">HSD · KMD Tab</text>
+        <text x="154" y="60" font-size="7" fill="rgba(255,255,255,.4)" font-family="Nunito,sans-serif">KMD Owner</text><text x="234" y="60" text-anchor="end" font-size="7" fill="rgba(255,255,255,.7)" font-family="Nunito,sans-serif">mchen</text>
+        <text x="154" y="72" font-size="7" fill="rgba(255,255,255,.4)" font-family="Nunito,sans-serif">CC WW</text><text x="234" y="72" text-anchor="end" font-size="7" fill="#81d4fa" font-weight="700" font-family="Nunito,sans-serif">26WW16</text>
+        <text x="154" y="84" font-size="7" fill="rgba(255,255,255,.4)" font-family="Nunito,sans-serif">IGT WW</text><text x="234" y="84" text-anchor="end" font-size="7" fill="#80cbc4" font-weight="700" font-family="Nunito,sans-serif">26WW18</text>
+        <rect x="152" y="94" width="96" height="36" rx="6" fill="rgba(67,160,71,.18)" stroke="rgba(67,160,71,.55)" stroke-width="1.5"/>
+        <text x="200" y="107" text-anchor="middle" font-size="7" fill="rgba(67,160,71,.8)" font-family="Nunito,sans-serif" font-weight="800">KMD Done</text>
+        <text x="200" y="122" text-anchor="middle" font-size="16" fill="#81c784" font-family="Nunito,sans-serif" font-weight="900">Yes ✓</text>
+        <text x="200" y="155" text-anchor="middle" font-size="7.5" fill="rgba(255,255,255,.5)" font-family="Nunito,sans-serif">Loop fully closed</text>
+      </svg>
+      <div style="font-size:.73rem;color:white;text-align:center;line-height:1.55;max-width:240px">
+        Once <strong style="color:#81d4fa">CC</strong> and <strong style="color:#80cbc4">IGT</strong> Stories are both Done, the tool writes <strong style="color:#81c784">KMD Done = Yes</strong> plus the actual completion WWs to the HSD KMD tab — no manual update needed.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════
+     SECTION 6 — Loop Complete
+════════════════════════════════════════ -->
+<section class="sec" id="s8">
+  <div class="slbl"><span class="sn">🎉</span> Loop Complete</div>
+  <h2>✅ The Delivery Modernisation Loop Is Closed</h2>
+  <p class="sub">HSD record → Jira hierarchy → engineering execution → backlog ranking → HSD writeback. Complete and repeatable for every feature.</p>
+  <div class="loopend">
+    <div class="lcircle">🔄</div>
+    <div class="lsteps">
+      <span class="ls">🗄️ HSD DB</span><span class="larr">→</span>
+      <span class="ls">🤖 KMD Scan</span><span class="larr">→</span>
+      <span class="ls">🌳 Jira Hierarchy</span><span class="larr">→</span>
+      <span class="ls">👩‍💻 Engineer Work</span><span class="larr">→</span>
+      <span class="ls">📅 Weekly Logs</span><span class="larr">→</span>
+      <span class="ls">📊 Backlog Orchestrator</span><span class="larr">→</span>
+      <span class="ls">📅 WW Dates</span><span class="larr">→</span>
+      <span class="ls" style="background:rgba(67,160,71,.2);border:1px solid rgba(67,160,71,.4)">↩️ HSD Updated ✓</span>
+    </div>
+    <div style="margin-top:24px;max-width:600px;margin-left:auto;margin-right:auto;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:18px 22px;font-size:.75rem;color:white;line-height:1.7;text-align:left">
+      <strong style="color:white;font-size:.82rem">Why this matters:</strong><br>
+      Manual tracking in spreadsheets breaks the moment someone leaves the team or forgets to update. This loop ensures every feature has a <strong style="color:#81d4fa">traceable Jira hierarchy</strong>, <strong style="color:#80cbc4">weekly time accountability</strong>, <strong style="color:#ffcc80">priority-ranked backlog</strong>, and <strong style="color:#a5d6a7">dates automatically reflected in HSD</strong> — with no manual spreadsheet sync required.
+    </div>
+    <div style="margin-top:20px">
+      <button onclick="restart()" style="background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.3);color:white;padding:10px 26px;border-radius:20px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s">↩ Start Over</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- Continue button -->
+<div class="cont-wrap">
+  <button class="contbtn animate-glow" id="contbtn" onclick="revealNext()">
+    Continue <span style="font-size:1.1rem">→</span>
+  </button>
+</div>
+
+<script>
+const TOTAL = 9; // s0..s8 — s0 always visible, s1..s6 revealed on click
+let next = 1;
+
+// Build left dots
+const dotsEl = document.getElementById('sdots');
+for (let i = 0; i < TOTAL; i++) {
+  const d = document.createElement('div');
+  d.className = 'sd' + (i === 0 ? ' done' : '');
+  d.title = 'Step ' + (i + 1);
+  d.onclick = () => jumpTo(i);
+  dotsEl.appendChild(d);
+}
+
+function revealNext() {
+  if (next >= TOTAL) { restart(); return; }
+  const sec = document.getElementById('s' + next);
+  sec.classList.add('vis');
+  const n = next;
+  next++;
+  setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  updateUI();
+}
+
+function jumpTo(target) {
+  for (let i = 0; i <= target; i++) {
+    const sec = document.getElementById('s' + i);
+    if (sec) sec.classList.add('vis');
+  }
+  next = Math.max(next, target + 1);
+  document.getElementById('s' + target).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateUI();
+}
+
+function restart() {
+  for (let i = 1; i < TOTAL; i++) {
+    const sec = document.getElementById('s' + i);
+    if (sec) sec.classList.remove('vis');
+  }
+  next = 1;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  updateUI();
+}
+
+function updateUI() {
+  const pct = (next / TOTAL) * 100;
+  document.getElementById('pfill').style.width = pct + '%';
+  document.querySelectorAll('.sd').forEach((d, i) => {
+    d.classList.toggle('done', i < next);
+    d.classList.toggle('active', i === next - 1);
+  });
+  const btn = document.getElementById('contbtn');
+  const revealed = next - 1;
+  document.getElementById('stepctr').textContent = revealed + ' / ' + (TOTAL - 1) + ' steps';
+  if (next >= TOTAL) {
+    btn.innerHTML = '↩ Start Over';
+    btn.classList.add('done');
+  } else {
+    btn.innerHTML = 'Continue <span style="font-size:1.1rem">\u2192</span>';
+    btn.classList.remove('done');
+  }
+}
+
+// Keyboard support
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+    e.preventDefault(); revealNext();
+  }
+  if (e.key === 'f' || e.key === 'F') { toggleFS(); }
+});
+
+// Fullscreen
+function toggleFS() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const on = !!document.fullscreenElement;
+  document.getElementById('fsico').textContent = on ? '✕' : '⛶';
+  document.getElementById('fstxt').textContent = on ? 'Exit Full' : 'Fullscreen';
+});
+
+updateUI();
+</script>
+</body>
+</html>

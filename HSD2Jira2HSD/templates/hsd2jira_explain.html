@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSD2Jira — How It Works</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background: #0f0f1a;
+        color: #e2e8f0;
+        min-height: 100vh;
+        padding: 32px 40px;
+    }
+    .back-btn {
+        display: inline-block;
+        margin-bottom: 24px;
+        color: #a78bfa;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+    .back-btn:hover { color: #c4b5fd; text-decoration: underline; }
+    h1 {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 6px;
+    }
+    .subtitle {
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.5);
+        margin-bottom: 40px;
+        line-height: 1.6;
+    }
+
+    /* ── Section cards ───────────────────────────────────────────────── */
+    .section {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 12px;
+        padding: 24px 28px;
+        margin-bottom: 32px;
+        max-width: 1400px;
+    }
+    .section-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.3);
+        margin-bottom: 4px;
+    }
+    .section-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #e2d9f3;
+        margin-bottom: 4px;
+    }
+    .section-meta {
+        font-size: 0.78rem;
+        color: rgba(255,255,255,0.4);
+        margin-bottom: 18px;
+        line-height: 1.5;
+    }
+    .section-meta code {
+        background: rgba(167,139,250,0.15);
+        color: #c4b5fd;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 0.75rem;
+    }
+
+    /* ── Mermaid diagrams ────────────────────────────────────────────── */
+    .mermaid {
+        background: rgba(0,0,0,0.25);
+        border-radius: 8px;
+        padding: 20px;
+        overflow-x: auto;
+        text-align: center;
+    }
+
+    /* ── Condition table ─────────────────────────────────────────────── */
+    .cond-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+        margin-top: 16px;
+    }
+    .cond-table th {
+        text-align: left;
+        padding: 6px 10px;
+        background: rgba(167,139,250,0.12);
+        color: #c4b5fd;
+        font-weight: 700;
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .cond-table td {
+        padding: 6px 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        color: rgba(255,255,255,0.75);
+        vertical-align: top;
+    }
+    .cond-table tr:last-child td { border-bottom: none; }
+    .badge-skip  { color: #fca5a5; font-weight: 700; }
+    .badge-create { color: #86efac; font-weight: 700; }
+    .badge-write  { color: #93c5fd; font-weight: 700; }
+
+    /* ── Common note ─────────────────────────────────────────────────── */
+    .common-note {
+        background: rgba(167,139,250,0.08);
+        border-left: 3px solid #a78bfa;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 0.82rem;
+        color: rgba(255,255,255,0.65);
+        line-height: 1.7;
+        max-width: 1400px;
+        margin-bottom: 32px;
+    }
+    .common-note b { color: #c4b5fd; }
+</style>
+</head>
+<body>
+
+<a href="/hsd2jira" class="back-btn">← Back to HSD2Jira</a>
+
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+<div>
+<h1>📖 How HSD2Jira Works</h1>
+<p class="subtitle" style="margin-bottom:0;">
+    For each HSD returned by the cron queries, the tool decides whether to create Jira issues or skip.<br>
+    Below is the decision logic for each tenant, followed by a quick-reference condition table.
+</p>
+</div>
+<a href="/hsd2jira/explain/slides" target="_blank"
+   style="display:inline-block;padding:10px 20px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;font-weight:800;font-size:0.95rem;border-radius:8px;text-decoration:none;letter-spacing:0.03em;box-shadow:0 0 16px rgba(20,184,166,0.5);white-space:nowrap;flex-shrink:0;">
+    🖥 View as Slides
+</a>
+<a href="/hsd2jira/explain/download-pptx"
+   style="display:inline-block;padding:10px 20px;background:linear-gradient(135deg,#c2410c,#f97316);color:#fff;font-weight:800;font-size:0.95rem;border-radius:8px;text-decoration:none;letter-spacing:0.03em;box-shadow:0 0 16px rgba(249,115,22,0.5);white-space:nowrap;flex-shrink:0;">
+    📥 Download .pptx
+</a>
+</div>
+    The CC Story key is written back to a field on the HSD child record so the cron is
+    <b>idempotent</b> — it will skip any HSD that already has a Jira key written.
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- 1. ip_hw_graphics.feature                                             -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-label">JGS / CRI / TGS GT queries</div>
+    <div class="section-title">ip_hw_graphics.feature</div>
+    <div class="section-meta">
+        Queries: <code>14024748599</code> CRI · <code>16026920807</code> JGS · <code>14026130398</code> TGS<br>
+        Writeback field: <code>sw_impact.sw_record</code> on <code>i915_kmd / linux / development</code> child
+    </div>
+
+    <div class="mermaid">
+flowchart TD
+    A([HSD from query]) --> B{ip_hw_graphics\n.feature?}
+    B -- No --> S1([⏭ Skip])
+    B -- Yes --> C{sw_impact child\ncore/common/architecture\nexposure valid?}
+    C -- No --> S2([⏭ Skip])
+    C -- Yes --> D{i915_kmd/linux/\ndevelopment child exists?}
+    D -- No --> E[Create sw_impact child] --> J
+    D -- Yes --> F{sw_exposure =\nnone / to_be_assigned?}
+    F -- Yes --> S3([⏭ Skip])
+    F -- No --> G{sw_record\nalready set?}
+    G -- No --> J[🔨 Create 9-issue\nJira hierarchy]
+    G -- Yes --> H{done = Yes?}
+    H -- Yes --> S4([⏭ Skip])
+    H -- No --> I{Jira Closed?}
+    I -- Yes --> W1([✏ Write done=Yes])
+    I -- No --> W2([✏ Write trend=WW])
+    J --> W3([✏ Write CC Story key\n→ sw_record])
+    </div>
+
+    <table class="cond-table">
+        <tr><th>Check</th><th>Condition</th><th>Result</th></tr>
+        <tr><td>HSD type</td><td>tenant=ip_hw_graphics, subject=feature</td><td class="badge-skip">SKIP if not</td></tr>
+        <tr><td>Gate child</td><td>sw_impact with core/common/architecture and valid exposure</td><td class="badge-skip">SKIP if missing</td></tr>
+        <tr><td>KMD dev exposure</td><td>i915_kmd/linux/development child has exposure=none/to_be_assigned</td><td class="badge-skip">SKIP</td></tr>
+        <tr><td>Already done</td><td>sw_record set AND done=Yes</td><td class="badge-skip">SKIP</td></tr>
+        <tr><td>Jira closed</td><td>sw_record set, Jira is Closed</td><td class="badge-write">Write done=Yes → HSD</td></tr>
+        <tr><td>Trend sync</td><td>sw_record set, Jira open, has Actual Trend WW</td><td class="badge-write">Write trend=WW → HSD</td></tr>
+        <tr><td>Needs Jira</td><td>sw_record empty, exposure valid</td><td class="badge-create">CREATE Jira</td></tr>
+        <tr><td>No KMD dev child</td><td>—</td><td class="badge-create">CREATE child + Jira</td></tr>
+    </table>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- 2. ip_hw_graphics.bugeco                                              -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-label">CRI WA</div>
+    <div class="section-title">ip_hw_graphics.bugeco</div>
+    <div class="section-meta">
+        Queries: <code>16029952357</code> CRI<br>
+        Writeback field: <code>sw_impact.sw_record</code> on <code>i915_kmd / wa_needed</code> child
+    </div>
+
+    <div class="mermaid">
+flowchart TD
+    A([HSD from query]) --> B{ip_hw_graphics\n.bugeco?}
+    B -- No --> S1([⏭ Skip])
+    B -- Yes --> C{sw_impact child\ni915_kmd / wa_needed\nexists?}
+    C -- No --> S2([⏭ Skip])
+    C -- Yes --> D{sw_record\nalready set?}
+    D -- Yes --> S3([⏭ Skip])
+    D -- No --> E[🔨 Create 9-issue\nJira hierarchy]
+    E --> W([✏ Write CC Story key\n→ sw_record])
+    </div>
+
+    <table class="cond-table">
+        <tr><th>Check</th><th>Condition</th><th>Result</th></tr>
+        <tr><td>HSD type</td><td>tenant=ip_hw_graphics, subject=bugeco</td><td class="badge-skip">SKIP if not</td></tr>
+        <tr><td>WA child</td><td>sw_impact with sw_component=i915_kmd AND func_impact=wa_needed</td><td class="badge-skip">SKIP if missing</td></tr>
+        <tr><td>Already processed</td><td>sw_record already set</td><td class="badge-skip">SKIP</td></tr>
+        <tr><td>Ready</td><td>sw_record empty</td><td class="badge-create">CREATE Jira</td></tr>
+    </table>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- 3. server.feature                                                     -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-label">JGS SOC query</div>
+    <div class="section-title">server.feature</div>
+    <div class="section-meta">
+        Queries: <code>14028056822</code> JGS<br>
+        Writeback field: <code>server.ar.jira_key</code> on <code>SW Development Review</code> child
+    </div>
+
+    <div class="mermaid">
+flowchart TD
+    A([HSD from query]) --> B{server\n.feature?}
+    B -- No --> S1([⏭ Skip])
+    B -- Yes --> C{server.ar child\ntitle=SW Arch Review\nvalid component + exposure?}
+    C -- No --> S2([⏭ Skip])
+    C -- Yes --> D[For each matching\nArch Review child]
+    D --> E{SW Development Review\nchild exists?}
+    E -- No --> F[Create SW Dev\nReview child] --> J
+    E -- Yes --> G{dev exposure =\nnone / to_be_assigned?}
+    G -- Yes --> S3([⏭ Skip component])
+    G -- No --> H{jira_key\nalready set?}
+    H -- Yes --> S4([⏭ Skip component])
+    H -- No --> J[🔨 Create 9-issue\nJira hierarchy]
+    J --> W([✏ Write CC Story key\n→ jira_key on dev child])
+    </div>
+
+    <table class="cond-table">
+        <tr><th>Check</th><th>Condition</th><th>Result</th></tr>
+        <tr><td>HSD type</td><td>tenant=server, subject=feature</td><td class="badge-skip">SKIP if not</td></tr>
+        <tr><td>Gate child</td><td>server.ar SW Arch Review with valid component and exposure</td><td class="badge-skip">SKIP if missing</td></tr>
+        <tr><td>Dev Review exposure</td><td>SW Development Review child has exposure=none/to_be_assigned</td><td class="badge-skip">SKIP component</td></tr>
+        <tr><td>Already processed</td><td>jira_key already set on dev child</td><td class="badge-skip">SKIP component</td></tr>
+        <tr><td>No dev child</td><td>SW Development Review doesn't exist</td><td class="badge-create">CREATE child + Jira</td></tr>
+        <tr><td>Ready</td><td>dev child exists, jira_key empty, exposure valid</td><td class="badge-create">CREATE Jira</td></tr>
+    </table>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- 4. dg_soc.feature                                                     -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-label">CRI / TGS SOC query</div>
+    <div class="section-title">dg_soc.feature</div>
+    <div class="section-meta">
+        Queries: <code>14024897996</code> CRI · <code>14027898530</code> TGS<br>
+        Writeback field: <code>dg_soc.ar.jira_key</code> on <code>i915_kmd / development</code> AR child
+    </div>
+
+    <div class="mermaid">
+flowchart TD
+    A([HSD from query]) --> B{dg_soc\n.feature?}
+    B -- No --> S1([⏭ Skip])
+    B -- Yes --> C{AR child\ni915_kmd/architecture\nexists?}
+    C -- No --> S2([⏭ Skip])
+    C -- Yes --> D{arch exposure =\nnone / to_be_assigned?}
+    D -- Yes --> S3([⏭ Skip])
+    D -- No --> E{i915_kmd/development\nAR child exists?}
+    E -- No --> F[Create i915_kmd/\ndevelopment AR child] --> J
+    E -- Yes --> G{dev exposure =\nnone / to_be_assigned?}
+    G -- Yes --> S4([⏭ Skip])
+    G -- No --> H{jira_key\nalready set?}
+    H -- Yes --> S5([⏭ Skip])
+    H -- No --> J[🔨 Create 9-issue\nJira hierarchy]
+    J --> W([✏ Write CC Story key\n→ jira_key on dev child])
+    </div>
+
+    <table class="cond-table">
+        <tr><th>Check</th><th>Condition</th><th>Result</th></tr>
+        <tr><td>HSD type</td><td>tenant=dg_soc, subject=feature</td><td class="badge-skip">SKIP if not</td></tr>
+        <tr><td>Gate child</td><td>AR child with team=i915_kmd, task=architecture</td><td class="badge-skip">SKIP if missing</td></tr>
+        <tr><td>Arch exposure</td><td>exposure=none or to_be_assigned</td><td class="badge-skip">SKIP</td></tr>
+        <tr><td>Dev exposure</td><td>i915_kmd/development child has exposure=none/to_be_assigned</td><td class="badge-skip">SKIP</td></tr>
+        <tr><td>Already processed</td><td>jira_key already set on dev child</td><td class="badge-skip">SKIP</td></tr>
+        <tr><td>No dev child</td><td>i915_kmd/development AR child doesn't exist</td><td class="badge-create">CREATE child + Jira</td></tr>
+        <tr><td>Ready</td><td>dev child exists, jira_key empty, exposure valid</td><td class="badge-create">CREATE Jira</td></tr>
+    </table>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- 5. server_platf.feature                                               -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <div class="section-label">CRI CCB</div>
+    <div class="section-title">server_platf.feature</div>
+    <div class="section-meta">
+        Queries: <code>13013902803</code> CRI<br>
+        Writeback field: <code>server_platf.ar.tag</code> on KMD AR child
+    </div>
+
+    <div class="mermaid">
+flowchart TD
+    A([HSD from query]) --> B{server_platf\n.feature?}
+    B -- No --> S1([⏭ Skip])
+    B -- Yes --> C{server_platf.ar child\nwith KMD in title?}
+    C -- No --> S2([⏭ Skip])
+    C -- Yes --> D{tag field\nalready set?}
+    D -- Yes --> S3([⏭ Skip])
+    D -- No --> E[🔨 Create 9-issue\nJira hierarchy]
+    E --> W([✏ Write CC Story key\n→ tag on KMD AR child])
+    </div>
+
+    <table class="cond-table">
+        <tr><th>Check</th><th>Condition</th><th>Result</th></tr>
+        <tr><td>HSD type</td><td>tenant=server_platf, subject=feature</td><td class="badge-skip">SKIP if not</td></tr>
+        <tr><td>KMD child</td><td>server_platf.ar child with "KMD" in title</td><td class="badge-skip">SKIP if missing</td></tr>
+        <tr><td>Already processed</td><td>tag field already set</td><td class="badge-skip">SKIP</td></tr>
+        <tr><td>Ready</td><td>tag empty</td><td class="badge-create">CREATE Jira</td></tr>
+    </table>
+</div>
+
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: {
+        primaryColor: '#3b2f6e',
+        primaryTextColor: '#e2d9f3',
+        primaryBorderColor: '#7c3aed',
+        lineColor: '#a78bfa',
+        secondaryColor: '#1e1b4b',
+        tertiaryColor: '#0f0f1a',
+        edgeLabelBackground: '#1e1b4b',
+    }});
+</script>
+</body>
+</html>

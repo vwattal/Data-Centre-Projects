@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSD → Jira Modernisation - Intel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Intel Clear', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
+            padding: 24px 20px;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 35px,
+                rgba(255,255,255,.018) 35px, rgba(255,255,255,.018) 70px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page-wrapper {
+            max-width: 1500px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        .main-content { flex: 1; min-width: 0; }
+        .queries-sidebar { width: 520px; flex-shrink: 0; position: sticky; top: 24px; }
+        .queries-panel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.11);
+            border-radius: 10px;
+            padding: 16px 18px;
+        }
+        .queries-panel h3 {
+            font-size: 0.82rem;
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.14);
+        }
+        .query-group { margin-bottom: 14px; }
+        .query-group:last-child { margin-bottom: 0; }
+        .query-group-label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: #60a5fa;
+            text-transform: uppercase;
+            letter-spacing: 0.9px;
+            margin-bottom: 4px;
+        }
+        .query-item {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .query-item:last-child { border-bottom: none; }
+        .query-item-name { font-size: 0.76rem; color: #fff; font-weight: 600; margin-bottom: 3px; }
+        .query-item-url {
+            font-size: 0.6rem;
+            color: #aaa;
+            word-break: break-all;
+            user-select: text;
+            font-family: monospace;
+        }
+        @media (max-width: 900px) { .queries-sidebar { display: none; } }
+
+        .header {
+            background: rgba(255,255,255,0.98);
+            border-radius: 10px;
+            padding: 14px 20px;
+            margin-bottom: 18px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            border-left: 4px solid #0071c5;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .back-btn {
+            text-decoration: none;
+            color: #0071c5;
+            font-weight: 600;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border: 1.5px solid #0071c5;
+            border-radius: 6px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .back-btn:hover { background: #0071c5; color: white; }
+
+        .header-text h1 { font-size: 1.1rem; color: #003c71; font-weight: 700; }
+        .header-text p   { font-size: 0.7rem; color: #777; margin-top: 2px; }
+
+        .form-card {
+            background: rgba(255,255,255,0.98);
+            border-radius: 10px;
+            padding: 24px 26px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            border-top: 3px solid #0071c5;
+        }
+
+        .form-card h2 { font-size: 0.95rem; color: #003c71; margin-bottom: 16px; }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #003c71;
+            margin-bottom: 6px;
+        }
+        .form-group label .req { color: #e53935; }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 13px;
+            border: 1.5px solid #ddd;
+            border-radius: 7px;
+            font-size: 0.88rem;
+            font-family: inherit;
+            color: #222;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #0071c5;
+            box-shadow: 0 0 0 3px rgba(0,113,197,0.14);
+        }
+        .form-group input::placeholder { color: #bbb; font-style: italic; }
+
+        .hint {
+            font-size: 0.68rem;
+            color: #888;
+            margin-bottom: 16px;
+            padding: 8px 12px;
+            background: #f5f8ff;
+            border-radius: 6px;
+            border-left: 3px solid #0071c5;
+        }
+
+        /* HSD preview panel */
+        .preview-panel {
+            background: #f0f7ff;
+            border: 1.5px solid #bdd8f5;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+        }
+        .prow {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            padding: 4px 0;
+            border-bottom: 1px solid #d8eaf8;
+        }
+        .prow:last-child { border-bottom: none; }
+        .plabel {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #0071c5;
+            min-width: 110px;
+            flex-shrink: 0;
+        }
+        .pval   { font-size: 0.8rem; color: #222; word-break: break-all; }
+        .pval.bold { font-weight: 600; color: #003c71; }
+
+        .fetch-btn {
+            width: 100%;
+            padding: 11px;
+            background: linear-gradient(135deg, #0071c5, #003c71);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .fetch-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,113,197,0.4); }
+        .fetch-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .change-url-btn {
+            padding: 10px 18px;
+            background: none;
+            border: 1.5px solid #aaa;
+            color: #555;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .change-url-btn:hover { border-color: #0071c5; color: #0071c5; }
+
+        .section-divider {
+            text-align: center;
+            color: rgba(255,255,255,0.55);
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin: 14px 0;
+        }
+
+        .writeback-ok {
+            background: #e8f5e9;
+            border: 1.5px solid #66bb6a;
+            color: #2e7d32;
+            border-radius: 7px;
+            padding: 9px 14px;
+            font-size: 0.78rem;
+            margin-top: 6px;
+        }
+        .writeback-warn {
+            background: #fff8e1;
+            border: 1.5px solid #ffca28;
+            color: #7d5a00;
+            border-radius: 7px;
+            padding: 9px 14px;
+            font-size: 0.78rem;
+            margin-top: 6px;
+        }
+
+        .create-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #00897b, #00695c);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.4px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .create-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,137,123,0.4); }
+        .create-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        #results { display: none; margin-top: 16px; }
+
+        .results-header {
+            background: rgba(255,255,255,0.98);
+            border-radius: 10px;
+            padding: 13px 18px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .results-header h2 { font-size: 0.92rem; color: #003c71; font-weight: 700; }
+        .results-header p  { font-size: 0.68rem; color: #888; margin-top: 2px; }
+
+        .count-pill {
+            background: #00897b;
+            color: white;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .results-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+
+        .result-item {
+            background: rgba(255,255,255,0.98);
+            border-radius: 8px;
+            padding: 11px 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            border-left: 4px solid;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease both;
+        }
+        .result-item.epic    { border-left-color: #7b1fa2; }
+        .result-item.story   { border-left-color: #0288d1; }
+        .result-item.task    { border-left-color: #388e3c; }
+        .result-item.child   { border-left-color: #ff9800; }
+        .result-item.level-1 { margin-left: 20px; }
+        .result-item.level-2 { margin-left: 40px; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-8px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        .result-item:nth-child(1) { animation-delay: 0.03s; }
+        .result-item:nth-child(2) { animation-delay: 0.08s; }
+        .result-item:nth-child(3) { animation-delay: 0.13s; }
+        .result-item:nth-child(4) { animation-delay: 0.18s; }
+        .result-item:nth-child(5) { animation-delay: 0.23s; }
+        .result-item:nth-child(6) { animation-delay: 0.28s; }
+        .result-item:nth-child(7) { animation-delay: 0.33s; }
+        .result-item:nth-child(8) { animation-delay: 0.38s; }
+        .result-item:nth-child(9) { animation-delay: 0.43s; }
+        .result-item:nth-child(10) { animation-delay: 0.48s; }
+
+        .type-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .badge-epic  { background: #f3e5f5; color: #7b1fa2; }
+        .badge-story-cc  { background: #e8f5e9; color: #388e3c; }
+        .badge-story-sim { background: #fff3e0; color: #f57c00; }
+        .badge-story-emu { background: #ffebee; color: #d32f2f; }
+        .badge-task  { background: #e0f2f1; color: #00796b; }
+        .badge-child-ph1 { background: #e1f5fe; color: #0277bd; }
+        .badge-child-ph2 { background: #e0f7fa; color: #00838f; }
+        .badge-child-igt { background: #fff8e1; color: #f57f17; }
+        .badge-child-ups { background: #f3e5f5; color: #6a1b9a; }
+
+        /* Query section */
+        .query-card { border-top-color: #7b1fa2 !important; }
+        .query-create-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #7b1fa2, #4a0072);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.4px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .query-create-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(123,31,162,0.4); }
+        .query-create-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .preview-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; margin-top: 10px; }
+        .preview-table th { background: #f3e5f5; color: #4a0072; padding: 5px 8px; text-align: left; font-weight: 700; }
+        .preview-table td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+        .preview-table tr:hover td { background: #fdf6ff; }
+        .tag-actionable { background: #e8f5e9; color: #2e7d32; padding: 2px 7px; border-radius: 4px; font-size: 0.62rem; font-weight: 700; }
+        .tag-skipped    { background: #f5f5f5; color: #888;    padding: 2px 7px; border-radius: 4px; font-size: 0.62rem; font-weight: 700; }
+
+        .query-result-card {
+            background: rgba(255,255,255,0.98);
+            border-radius: 8px;
+            padding: 14px 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            margin-bottom: 10px;
+            border-left: 4px solid #7b1fa2;
+        }
+        .query-result-card.skipped { border-left-color: #ccc; }
+        .query-result-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .query-result-hsd-id { font-size: 0.88rem; font-weight: 700; color: #003c71; white-space: nowrap; }
+        .query-result-title  { font-size: 0.78rem; color: #333; flex: 1; }
+
+
+        .result-key { font-size: 0.82rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+        .result-key a { color: #0071c5; text-decoration: none; }
+        .result-key a:hover { text-decoration: underline; }
+
+        .result-summary { font-size: 0.76rem; color: #333; flex: 1; line-height: 1.3; }
+        .result-note    { font-size: 0.62rem; color: #aaa; white-space: nowrap; flex-shrink: 0; }
+
+        .copy-link-btn {
+            background: none;
+            border: 1px solid #ccc;
+            color: #888;
+            border-radius: 4px;
+            padding: 2px 7px;
+            font-size: 0.62rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.15s;
+        }
+        .copy-link-btn:hover { border-color: #0071c5; color: #0071c5; }
+
+        .error-box {
+            background: #fff5f5;
+            border: 1.5px solid #e53935;
+            border-radius: 8px;
+            padding: 11px 15px;
+            font-size: 0.8rem;
+            color: #c62828;
+        }
+
+        .reset-btn {
+            background: none;
+            border: 1.5px solid rgba(255,255,255,0.55);
+            color: rgba(255,255,255,0.8);
+            padding: 8px 22px;
+            border-radius: 7px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: block;
+            margin: 0 auto 4px;
+            transition: all 0.2s;
+        }
+        .reset-btn:hover { background: rgba(255,255,255,0.12); color: white; }
+
+        .spinner {
+            display: inline-block;
+            width: 15px; height: 15px;
+            border: 2px solid rgba(255,255,255,0.35);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="page-wrapper">
+<div class="main-content">
+
+    <div class="header">
+        <a href="/" class="back-btn">← Home</a>
+        <div class="header-text" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+            <div>
+                <h1>🔗 HSD → Jira Modernisation</h1>
+                <p>Creates Epic + 3 Parent Stories + 3 Child Stories + Upstream Task + Child Story = 9 issues in VLK</p>
+            </div>
+            <a href="/hsd2jira/explain" target="_blank"
+               style="display:inline-block;padding:10px 20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-weight:800;font-size:1rem;border-radius:8px;text-decoration:none;letter-spacing:0.03em;box-shadow:0 0 18px rgba(167,139,250,0.6);white-space:nowrap;flex-shrink:0;">
+                📖 CLICK ME FOR EXPLANATION
+            </a>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- NEW: HSD Query → Jira + new HSD AR child                          -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="form-card query-card" id="queryCard">
+        <h2>🔍 Process HSD Query</h2>
+
+        <!-- Phase 1 — URL input -->
+        <div id="qPhase1">
+            <div class="form-group" style="margin-bottom:14px">
+                <label>HSD Query URL or Single HSD Article URL <span class="req">*</span></label>
+                <input type="text" id="queryUrl"
+                       placeholder="https://hsdes.intel.com/appstore/generalapps/#/pages/community/...?queryId=14027898530"
+                       style="width:100%;padding:10px 13px;border:1.5px solid #ddd;border-radius:7px;font-size:0.88rem;font-family:inherit;color:#222;" />
+            </div>
+            <div class="hint">
+                Accepts a <strong>query URL</strong> (<code>?queryId=…</code>) or a <strong>single HSD article URL</strong>.<br><br>
+                <strong>server.feature</strong> — JGS/CRI KMD feature HSDs:<br>
+                1️⃣ Find <code>server.ar</code> children where <code>title = SW Arch Review</code>, <code>component</code> ∈ <em>sw.xe_kmd / sw.ual_kmd</em>, <code>exposure</code> ≠ <em>none / to_be_assigned</em><br>
+                2️⃣ For each: check for a corresponding <code>server.ar</code> child with <code>title = SW Development Review</code> and same component<br>
+                &nbsp;&nbsp;&nbsp;• If SW Dev Review exists &amp; <code>jira_key</code> already set → skip<br>
+                &nbsp;&nbsp;&nbsp;• If SW Dev Review exists &amp; <code>jira_key</code> empty → create <strong>Epic + 8 Jira issues</strong> &amp; write back <code>jira_key</code><br>
+                &nbsp;&nbsp;&nbsp;• If SW Dev Review missing → create it (same component, same exposure), create <strong>Epic + 8 Jira issues</strong> &amp; write <code>jira_key</code> = CC story key<br>
+                &nbsp;&nbsp;&nbsp;• Platform auto-detected from <code>family_affected</code>: <em>Jaguar Shores</em> → <code>Jaguar Shores</code> + tag <code>JGS</code><br>
+                &nbsp;&nbsp;&nbsp;• Component mapping: <code>sw.xe_kmd</code> → XeKMD / guptasa2 &nbsp;|&nbsp; <code>sw.ual_kmd</code> → Kernel - UAL / myossefi<br><br>
+                <strong>dg_soc.feature</strong> — for each HSD in the query, two paths run independently:<br>
+                <strong>i915_kmd path</strong> — uses exposure from <code>task=architecture</code> child if present, otherwise from <code>task=development</code> child:<br>
+                &nbsp;&nbsp;&nbsp;• <code>exposure = none / to_be_assigned</code> → skip i915_kmd (HSD may still be processed via UAL path)<br>
+                &nbsp;&nbsp;&nbsp;• <code>i915_kmd / development</code> child exists with empty <code>jira_key</code> → reuse it, create <strong>Epic + 8 Jira issues</strong>, write back <code>jira_key</code><br>
+                &nbsp;&nbsp;&nbsp;• No <code>development</code> child → create new <code>dg_soc.ar</code> child (<code>team=i915_kmd</code>, <code>task=development</code>, <code>type=sw_assessment</code>), create Jira, write back<br>
+                &nbsp;&nbsp;&nbsp;• Component = <strong>XeKMD</strong> / assignee = <strong>mtangri</strong><br>
+                <strong>sw.ual_kmd path</strong> — checked independently regardless of i915_kmd result:<br>
+                &nbsp;&nbsp;&nbsp;• <code>sw.ual_kmd / development</code> child with valid exposure and empty <code>jira_key</code> → create <strong>Epic + 8 Jira issues</strong>, write back <code>jira_key</code><br>
+                &nbsp;&nbsp;&nbsp;• Component = <strong>Kernel - UAL</strong> / assignee = <strong>jzuo2</strong><br>
+                Both paths: creates <em>Epic · CC Parent Story (labeled <code>{TAG}_DCN_Query</code>) · 2 CC Child Stories · IGT Story (component: <code>Test-Core</code>) · Sim Story · Emu Story · Upstream Task · Upstream Child Story</em><br>
+                Skips the entire HSD only if no <code>i915_kmd</code> or <code>sw.ual_kmd</code> development/architecture child exists at all.<br><br>
+                <strong>server_platf.feature</strong> — for each HSD in the query:<br>
+                1️⃣ Find the <code>server_platf.ar</code> child whose title contains <em>KMD / XeKMD / Xe KMD</em><br>
+                2️⃣ Create <strong>Epic + 8 Jira issues</strong> in VLK<br>
+                3️⃣ Write the <strong>CC parent story key</strong> to the matched AR child's <code>tag</code> field<br><br>
+                <strong>ip_hw_graphics.bugeco</strong> — SW Workaround bugs:<br>
+                1️⃣ Find the <code>ip_hw_graphics.sw_impact</code> child where <code>sw_component = i915_kmd</code> and <code>func_impact = wa_needed</code><br>
+                2️⃣ Create <strong>Epic + 8 Jira issues</strong> in VLK<br>
+                3️⃣ Write the <strong>CC parent story key</strong> to <code>ip_hw_graphics.sw_impact.sw_record</code><br>
+                &nbsp;&nbsp;&nbsp;• Skipped if <code>sw_record</code> is already populated<br><br>
+                <strong>ip_hw_graphics.feature</strong> — HW Feature HSDs with SW impact:<br>
+                1️⃣ Gate: find <code>ip_hw_graphics.sw_impact</code> child where <code>sw_component=core</code>, <code>os=common</code>, <code>sw_task=architecture</code>, <code>sw_exposure</code> ≠ <em>to_be_assigned / none</em><br>
+                2️⃣ If <code>i915_kmd / linux / development</code> child exists: skip if <code>sw_record</code> is set; else create <strong>Epic + 8 Jira issues</strong> in VLK &amp; write back <code>sw_record</code><br>
+                3️⃣ If no kmd dev child: create <code>ip_hw_graphics.sw_impact</code> child (<code>sw_component=i915_kmd</code>, <code>sw_task=development</code>, <code>os=linux</code>, same <code>sw_exposure</code>, <code>owner=guptasa2</code>), create <strong>Epic + 8 Jira issues</strong> in VLK &amp; write back <code>sw_record</code>
+            </div>
+            <button class="fetch-btn" id="qPreviewBtn" onclick="previewQuery()" style="background: linear-gradient(135deg, #7b1fa2, #4a0072);">
+                🔍 Preview HSDs in Query
+            </button>
+        </div>
+
+        <!-- Phase 2 — Preview + create form -->
+        <div id="qPhase2" style="display:none">
+            <div class="preview-panel" id="qPreviewSummary"></div>
+            <div id="qPreviewTable"></div>
+
+            <div class="form-row" style="margin-top:14px">
+                <div class="form-group">
+                    <label>Platform/s</label>
+                    <input type="text" id="qPlatform" placeholder="e.g. tiger_shores, crescent_island, battlemage_g21" />
+                </div>
+                <div class="form-group">
+                    <label>Component 1</label>
+                    <input type="text" id="qComponent" value="XeKMD" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Component 2 <span style="font-weight:400;color:#888">(optional)</span></label>
+                    <input type="text" id="qComponent2" placeholder="e.g. Kernel - core" />
+                </div>
+                <div class="form-group">
+                    <label>Assignee</label>
+                    <input type="text" id="qAssignee" value="mtangri" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="flex:1">
+                    <label>Project tag <span class="req">*</span></label>
+                    <input type="text" id="qProjectTag" placeholder="e.g. TGS, JGS, CRI, EXI" required />
+                    <small style="color:#888;display:block;margin-top:4px">Required. <code>[TAG]</code> is prepended to every Jira title and <code>TAG_DCN_Query</code> label is added to the CC parent story.</small>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:4px">
+                <button class="change-url-btn" onclick="resetQueryForm()">↩ Change URL</button>
+                <button class="query-create-btn" id="qProcessBtn" onclick="processQuery()" style="flex:1">
+                    ✅ Process All Actionable HSDs
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query processing results -->
+    <div id="queryResults" style="display:none;margin-top:16px">
+        <div class="results-header">
+            <div>
+                <h2>🔍 Query Processing Results</h2>
+                <p id="qResultsSubtitle"></p>
+            </div>
+            <div class="count-pill" id="qCountPill" style="background:#7b1fa2"></div>
+        </div>
+        <div id="queryResultsGrid"></div>
+        <button class="reset-btn" onclick="resetQueryFull()">↩ Process Another Query</button>
+    </div>
+
+    <div class="section-divider">— or use single HSD article link ↓ —</div>
+
+    <div class="section-divider">— or enter feature title manually ↓ —</div>
+
+    <div class="form-card">
+        <h2>✏️ New Feature</h2>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Platform/s <span class="req">*</span></label>
+                <input type="text" id="platformName" placeholder="e.g. tiger_shores, crescent_island, battlemage_g21" />
+            </div>
+            <div class="form-group">
+                <label>Feature Title <span class="req">*</span></label>
+                <input type="text" id="featureTitle" placeholder="e.g. Telemetry Data Collection" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Component 1 <span class="req">*</span></label>
+                <input type="text" id="component" placeholder="e.g. XeKMD" value="XeKMD" />
+            </div>
+            <div class="form-group">
+                <label>Component 2 <span style="font-weight:400;color:#888">(optional)</span></label>
+                <input type="text" id="component2" placeholder="e.g. Kernel - core" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Assignee <span class="req">*</span></label>
+                <input type="text" id="assignee" placeholder="e.g. mtangri" value="mtangri" />
+            </div>
+        </div>
+        <div class="hint">
+            Creates <strong>9 Jira issues</strong> in <strong>VLK</strong> with your specified component and assignee
+        </div>
+        <button class="create-btn" id="createBtn" onclick="createInJira()">
+            ✅ Create in Jira
+        </button>
+    </div>
+
+    <div class="section-divider">— owner-based AR HSD creation ↓ —</div>
+
+    <div class="form-card" id="ownerArCard">
+        <h2>🧩 Creating Jira based on owner in AR Field HSD</h2>
+        <div class="hint" style="margin-top:-6px;margin-bottom:14px;">
+            Corner case scenario: when there are multiple child titles in the AR tab, use owner only to match and create Jira.
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>HSD Article URL <span class="req">*</span></label>
+                <input type="text" id="ownerHsdUrl" placeholder="https://hsdes.intel.com/appstore/article-one/#/article/22022506187" />
+            </div>
+            <div class="form-group">
+                <label>Owner in AR field <span class="req">*</span></label>
+                <input type="text" id="ownerArName" placeholder="e.g. ayazahma" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Platform <span style="font-weight:400;color:#888">(optional, auto-detected if empty)</span></label>
+                <input type="text" id="ownerArPlatform" placeholder="e.g. crescent_island" />
+            </div>
+            <div class="form-group">
+                <label>Jira Component</label>
+                <input type="text" id="ownerArComponent" value="XeKMD" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Jira Component 2 <span style="font-weight:400;color:#888">(optional)</span></label>
+                <input type="text" id="ownerArComponent2" placeholder="e.g. XeKMD - core" />
+            </div>
+        </div>
+        <div class="hint">
+            This is an owner-first corner-case flow: it scans the tenant's child records, finds the owner match,
+            and creates <strong>9 Jira issues</strong> using <strong>Parent HSD title + child title</strong>.
+            Jira <strong>assignee = child owner</strong>. Uses tenant-aware writeback field:
+            <code>server.ar.jira_key</code>, <code>dg_soc.ar.jira_key</code>, <code>server_platf.ar.tag</code>, or
+            <code>ip_hw_graphics.sw_impact.sw_record</code>.
+            Skips children where the corresponding writeback field is already set.
+        </div>
+        <button class="create-btn" id="ownerArCreateBtn" onclick="createFromArOwnerHsd()">
+            ✅ Create Owner-based Jira Structures
+        </button>
+    </div>
+
+    <div id="ownerArResults" style="display:none;margin-top:16px">
+        <div class="results-header">
+            <div>
+                <h2>🧩 Owner-based AR Results</h2>
+                <p id="ownerArResultsSubtitle"></p>
+            </div>
+            <div class="count-pill" id="ownerArCountPill" style="background:#00695c"></div>
+        </div>
+        <div id="ownerArResultsGrid"></div>
+    </div>
+
+    <div id="results">
+        <div class="results-header">
+            <div>
+                <h2>🔗 Created Jira Issues</h2>
+                <p id="resultsSubtitle"></p>
+            </div>
+            <div class="count-pill" id="countPill"></div>
+        </div>
+        <div class="results-grid" id="resultsGrid"></div>
+        <button class="reset-btn" onclick="resetForm()">↩ Create Another</button>
+    </div>
+
+    <div class="section-divider">— xe5 DCN tracking ↓ —</div>
+
+    <div class="form-card" style="background:linear-gradient(135deg,rgba(0,80,40,0.18),rgba(0,40,80,0.12));border:1.5px solid rgba(0,180,80,0.25);">
+        <h2>📊 xe5 DCN Enabling Status</h2>
+        <div class="hint" style="margin-top:-6px;margin-bottom:18px;">
+            Generates an Excel file (matching the JGS GT DCNs structure) from HSD query
+            <code style="background:rgba(255,255,255,0.12);padding:1px 5px;border-radius:3px;">14028312865</code>.
+            Two sheets: <strong>xe5 GT DCNs</strong> (formulas) + <strong>DO NOT MODIFY</strong> (raw data).
+            Tracks 5 components: XeKMD · GUC · IGC Compute · PISA Finaliser · Compute.
+        </div>
+        <a href="/xe5-dcn-status"
+           style="display:inline-flex;align-items:center;gap:8px;padding:11px 22px;
+                  background:linear-gradient(135deg,#1a7340,#0e4f2a);color:white;
+                  border-radius:8px;text-decoration:none;font-weight:700;font-size:0.9rem;
+                  transition:all 0.2s;box-shadow:0 3px 10px rgba(0,0,0,0.3);"
+           onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 18px rgba(26,115,64,0.5)'"
+           onmouseout="this.style.transform='';this.style.boxShadow='0 3px 10px rgba(0,0,0,0.3)'">
+            📥 Open xe5 DCN Status page
+        </a>
+    </div>
+
+</div>
+
+    <!-- ═══ Cron auto-processing panel ═══════════════════════════════════ -->
+    <div class="queries-sidebar" style="margin-top:16px;">
+        <div class="queries-panel" id="cronPanel">
+            <h3>⏱ Auto-processing</h3>
+
+            <!-- Enable toggle row -->
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 10px;background:rgba(255,255,255,0.06);border-radius:7px;">
+                <span id="cronDot" style="width:11px;height:11px;border-radius:50%;background:#bbb;flex-shrink:0;box-shadow:0 0 5px rgba(0,0,0,0.4);"></span>
+                <label style="cursor:pointer;font-weight:600;font-size:0.9rem;color:#e2e8f0;user-select:none;">
+                    <input type="checkbox" id="cronToggle" onchange="toggleCron(this.checked)" style="margin-right:6px;accent-color:#60a5fa;width:14px;height:14px;vertical-align:middle;">
+                    Enable background cron
+                </label>
+            </div>
+
+            <!-- Schedule label -->
+            <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;">
+                Schedule: <b style="color:#e2e8f0;">Every Friday</b>
+            </div>
+
+            <!-- Status block -->
+            <div id="cronStatus" style="font-size:0.83rem;color:#94a3b8;line-height:1.9;padding:8px 10px;background:rgba(0,0,0,0.15);border-radius:7px;margin-bottom:12px;">
+                Checking…
+            </div>
+
+            <button onclick="showCronLog()" style="width:100%;font-size:0.82rem;padding:6px 10px;cursor:pointer;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:6px;color:#e2e8f0;font-weight:500;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.14)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                📋 View run details
+            </button>
+        </div>
+
+        <!-- ── TREND/DONE weekly sync panel ── -->
+        <div class="queries-panel" id="trendCronPanel" style="margin-top:12px;border-left:3px solid #a78bfa;">
+            <h3>📅 Weekly TREND Sync</h3>
+
+            <!-- Purpose blurb -->
+            <p style="font-size:0.75rem;color:rgba(255,255,255,0.65);margin:0 0 10px;line-height:1.6;">
+                Runs every <b style="color:#fff;">Friday</b>. Reads the
+                <b style="color:#c4b5fd;">Actual Trend WW</b> field from each linked Jira ticket
+                and writes it back to the corresponding HSD child record, keeping HSD dates in sync
+                with what the team has committed to in Jira. If the Jira ticket is already
+                <b style="color:#86efac;">Closed</b>, a completion marker is written instead.
+                Covers <b style="color:#fff;">five tenants</b>: ip_hw_graphics.feature, ip_hw_graphics.bugeco, server, dg_soc, and server_platf.
+            </p>
+
+            <!-- Per-tenant breakdown -->
+            <div style="font-size:0.73rem;color:rgba(255,255,255,0.55);margin-bottom:10px;">
+
+                <!-- ip_hw_graphics.feature -->
+                <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:7px 9px;margin-bottom:6px;">
+                    <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">JGS / CRI / TGS GT queries</div>
+                    <div style="font-weight:700;color:#e2d9f3;margin-bottom:3px;">
+                        ip_hw_graphics.feature
+                        <span style="font-weight:400;color:rgba(255,255,255,0.45);margin-left:6px;font-size:0.7rem;">HSD child: i915_kmd / linux / development</span>
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <span style="color:rgba(255,255,255,0.4);">Queries:</span>
+                        <span style="color:#c4b5fd;">CRI (14024748599) · JGS (16026920807) · TGS (14026130398)</span>
+                    </div>
+                    <div>
+                        <span style="color:rgba(255,255,255,0.4);">Writes:</span>
+                        <span style="color:#c4b5fd;">sw_impact.trend = &lt;WW&gt;</span>
+                        <span style="color:rgba(255,255,255,0.35);margin:0 4px;">·</span>
+                        if closed → <span style="color:#86efac;">sw_impact.done = Yes</span>
+                    </div>
+                </div>
+
+                <!-- server -->
+                <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:7px 9px;margin-bottom:6px;">
+                    <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">JGS SOC query</div>
+                    <div style="font-weight:700;color:#e2d9f3;margin-bottom:3px;">
+                        server.feature
+                        <span style="font-weight:400;color:rgba(255,255,255,0.45);margin-left:6px;font-size:0.7rem;">HSD child: SW Development Review</span>
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <span style="color:rgba(255,255,255,0.4);">Queries:</span>
+                        <span style="color:#c4b5fd;">JGS (14028056822)</span>
+                    </div>
+                    <div>
+                        <span style="color:rgba(255,255,255,0.4);">Writes:</span>
+                        <span style="color:#93c5fd;">server.ar.new_projected_dates = &lt;WW&gt;</span>
+                        <span style="color:rgba(255,255,255,0.35);margin:0 4px;">·</span>
+                        if closed → <span style="color:#6ee7b7;">server.ar.reason = verified</span>
+                    </div>
+                </div>
+
+                <!-- dg_soc -->
+                <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:7px 9px;margin-bottom:6px;">
+                    <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">CRI / TGS SOC query</div>
+                    <div style="font-weight:700;color:#e2d9f3;margin-bottom:3px;">
+                        dg_soc.feature
+                        <span style="font-weight:400;color:rgba(255,255,255,0.45);margin-left:6px;font-size:0.7rem;">HSD child: i915_kmd / development</span>
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <span style="color:rgba(255,255,255,0.4);">Queries:</span>
+                        <span style="color:#c4b5fd;">CRI (14024897996) · TGS (14027898530)</span>
+                    </div>
+                    <div>
+                        <span style="color:rgba(255,255,255,0.4);">Writes:</span>
+                        <span style="color:#fcd34d;">dg_soc.ar.phase = &lt;WW&gt;</span>
+                        <span style="color:rgba(255,255,255,0.35);margin:0 4px;">·</span>
+                        if closed → <span style="color:#86efac;">dg_soc.ar.phase = Done</span>
+                    </div>
+                </div>
+
+                <!-- server_platf -->
+                <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:7px 9px;margin-bottom:6px;">
+                    <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">CRI CCB</div>
+                    <div style="font-weight:700;color:#e2d9f3;margin-bottom:3px;">
+                        server_platf.feature
+                        <span style="font-weight:400;color:rgba(255,255,255,0.45);margin-left:6px;font-size:0.7rem;">HSD child: KMD AR child (title contains KMD)</span>
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <span style="color:rgba(255,255,255,0.4);">Queries:</span>
+                        <span style="color:#c4b5fd;">CRI (13013902803)</span>
+                    </div>
+                    <div>
+                        <span style="color:rgba(255,255,255,0.4);">Writes:</span>
+                        <span style="color:#c4b5fd;">server_platf.ar.trend = &lt;WW&gt;</span>
+                        <span style="color:rgba(255,255,255,0.35);margin:0 4px;">·</span>
+                        if closed → <span style="color:#86efac;">server_platf.ar.trend = Done</span>
+                    </div>
+                </div>
+
+                <!-- ip_hw_graphics.bugeco -->
+                <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:7px 9px;">
+                    <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">CRI WA</div>
+                    <div style="font-weight:700;color:#e2d9f3;margin-bottom:3px;">
+                        ip_hw_graphics.bugeco
+                        <span style="font-weight:400;color:rgba(255,255,255,0.45);margin-left:6px;font-size:0.7rem;">SW WA child: i915_kmd / wa_needed, sw_record has VLK key</span>
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <span style="color:rgba(255,255,255,0.4);">Queries:</span>
+                        <span style="color:#c4b5fd;">CRI (16029952357)</span>
+                    </div>
+                    <div>
+                        <span style="color:rgba(255,255,255,0.4);">Writes:</span>
+                        <span style="color:#c4b5fd;">sw_impact.trend = &lt;WW&gt;</span>
+                        <span style="color:rgba(255,255,255,0.35);margin:0 4px;">·</span>
+                        if closed → <span style="color:#86efac;">sw_impact.done = Yes</span>
+                    </div>
+                </div>
+
+            </div><!-- end per-tenant -->
+
+            <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-bottom:10px;">
+                ⚠ Only children where <code style="color:#c4b5fd;">exposure</code> is <b>high / medium / low</b> and a Jira key is linked are processed. All others are skipped.
+            </div>
+
+            <!-- Toggle -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <span id="trendCronDot" style="width:10px;height:10px;border-radius:50%;background:#bbb;flex-shrink:0;"></span>
+                <label style="cursor:pointer;font-weight:600;font-size:0.9rem;color:#fff;">
+                    <input type="checkbox" id="trendCronToggle" onchange="toggleTrendCron(this.checked)" style="margin-right:4px;">
+                    Enable TREND sync
+                </label>
+            </div>
+            <div id="trendCronStatus" style="font-size:0.78rem;color:rgba(255,255,255,0.6);line-height:1.6;">
+                Checking…
+            </div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+                <button onclick="showTrendCronLog()" style="font-size:0.75rem;padding:3px 8px;cursor:pointer;background:rgba(167,139,250,0.18);border:1px solid rgba(167,139,250,0.5);border-radius:4px;color:#ddd6fe;">
+                    📋 View log
+                </button>
+                <a id="trendCronDownload" href="/hsd2jira/trend-cron/download-log"
+                   style="font-size:0.75rem;padding:3px 8px;cursor:pointer;background:rgba(167,139,250,0.18);border:1px solid rgba(167,139,250,0.5);border-radius:4px;color:#ddd6fe;text-decoration:none;">
+                    ⬇ Download CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Trend cron log modal ───────────────────────────────────────────────── -->
+<div id="trendCronLogModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;overflow-y:auto;" onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:#fff;max-width:1000px;margin:40px auto;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.25);overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+            <h3 style="margin:0;font-size:1rem;color:#7c3aed;">📅 TREND Sync run history</h3>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <a href="/hsd2jira/trend-cron/download-log" style="font-size:0.78rem;padding:3px 10px;background:#7c3aed;color:#fff;border-radius:4px;text-decoration:none;">⬇ Download latest CSV</a>
+                <button onclick="document.getElementById('trendCronLogModal').style.display='none'" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#64748b;">✕</button>
+            </div>
+        </div>
+        <div id="trendCronLogBody" style="padding:16px 20px;font-size:0.82rem;max-height:75vh;overflow-y:auto;">
+            Loading…
+        </div>
+    </div>
+</div>
+
+<!-- ── Cron log modal ──────────────────────────────────────────────────────── -->
+<div id="cronLogModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;overflow-y:auto;" onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:#fff;max-width:900px;margin:40px auto;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.25);overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+            <h3 style="margin:0;font-size:1rem;">⏱ Cron run history</h3>
+            <button onclick="document.getElementById('cronLogModal').style.display='none'" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#64748b;">✕</button>
+        </div>
+        <div id="cronLogBody" style="padding:16px 20px;font-size:0.82rem;max-height:75vh;overflow-y:auto;">
+            Loading…
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── Cron helpers ──────────────────────────────────────────────────────────
+    async function _cronFetch(path, opts) {
+        const r = await fetch(path, opts);
+        return r.json();
+    }
+
+    async function refreshCronStatus() {
+        try {
+            const d = await _cronFetch('/hsd2jira/cron/status');
+            document.getElementById('cronToggle').checked = d.enabled;
+            const dot = document.getElementById('cronDot');
+            if (d.enabled && d.thread_alive) {
+                dot.style.background = '#22c55e';
+                dot.title = 'Running';
+            } else if (d.enabled) {
+                dot.style.background = '#f59e0b';
+                dot.title = 'Enabled (thread starting)';
+            } else {
+                dot.style.background = '#bbb';
+                dot.title = 'Disabled';
+            }
+            const box = document.getElementById('cronStatus');
+            let html = `<span style="color:#e2e8f0">Queries:</span> <b style="color:#60a5fa">${d.query_count}</b>`;
+            if (d.last_run) html += `<br><span style="color:#e2e8f0">Last run:</span> <b style="color:#a3e635">${d.last_run}</b>`;
+            if (d.last_result) {
+                const lr = d.last_result;
+                if (lr.error) html += `<br><span style="color:#f87171">Error: ${lr.error}</span>`;
+                else html += `<br><span style="color:#e2e8f0">Processed:</span> <b>${lr.processed}</b> &nbsp;·&nbsp; <span style="color:#e2e8f0">Skipped:</span> <b>${lr.skipped}</b>` +
+                             (lr.errors ? ` &nbsp;·&nbsp; <span style="color:#f87171">Errors: ${lr.errors}</span>` : '');
+            }
+            if (!d.last_run) html += '<br><span style="color:#64748b;font-style:italic">Never run</span>';
+            box.innerHTML = html;
+        } catch (e) {
+            document.getElementById('cronStatus').textContent = 'Status unavailable';
+        }
+    }
+
+    async function showCronLog() {
+        const modal = document.getElementById('cronLogModal');
+        const body  = document.getElementById('cronLogBody');
+        modal.style.display = 'block';
+        body.innerHTML = 'Loading…';
+        try {
+            const runs = await _cronFetch('/hsd2jira/cron/log');
+            if (!Array.isArray(runs) || runs.length === 0) {
+                body.innerHTML = '<i style="color:#888">No runs recorded yet.</i>';
+                return;
+            }
+            body.innerHTML = runs.map((run, ri) => {
+                const s = run.summary || {};
+                const details = run.details || [];
+                const processed = details.filter(r => !r.skipped);
+                const skipped   = details.filter(r =>  r.skipped);
+                let html = `
+                    <div style="margin-bottom:20px;">
+                    <div style="font-weight:700;font-size:0.88rem;color:#1e40af;margin-bottom:6px;">
+                        Run ${ri+1}: ${run.run_time}
+                        &nbsp;—&nbsp; Total HSDs: ${s.total ?? details.length}
+                        &nbsp;|&nbsp; Processed: ${s.processed ?? processed.length}
+                        &nbsp;|&nbsp; Skipped: ${s.skipped ?? skipped.length}
+                        ${s.errors ? `&nbsp;|&nbsp; <span style="color:#ef4444">Errors: ${s.errors}</span>` : ''}
+                    </div>`;
+                if (processed.length) {
+                    html += `<details open><summary style="cursor:pointer;font-weight:600;color:#166534;margin-bottom:4px;">✅ Processed (${processed.length})</summary>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+                    <thead><tr style="background:#f0fdf4;text-align:left;">
+                        <th style="padding:4px 6px;border:1px solid #d1fae5;">HSD</th>
+                        <th style="padding:4px 6px;border:1px solid #d1fae5;">Title</th>
+                        <th style="padding:4px 6px;border:1px solid #d1fae5;">Tenant</th>
+                        <th style="padding:4px 6px;border:1px solid #d1fae5;">Platform</th>
+                        <th style="padding:4px 6px;border:1px solid #d1fae5;">Jira created</th>
+                        <th style="padding:4px 6px;border:1px solid #d1fae5;">Writeback</th>
+                        <th style="padding:4px 6px;border:1px solid #d1fae5;">HSD child</th>
+                    </tr></thead><tbody>`;
+                    for (const r of processed) {
+                        const jiraKeys = (r.created_jira||[]).filter(j=>j.key).map(j=>`<a href="${j.url}" target="_blank">${j.key}</a>`).join(', ');
+                        const hasErr   = (r.errors||[]).length > 0;
+                        const childLink = r.new_hsd_child_id
+                            ? `<a href="https://hsdes.intel.com/appstore/article-one/#/${r.new_hsd_child_id}" target="_blank">${r.new_hsd_child_id}</a>` : '—';
+                        const wbCell = r.writeback_field ? `<code style="font-size:0.75rem;color:#166534">${r.writeback_field}</code>` : (r.hsd_writeback_ok ? '✓' : '—');
+                        html += `<tr style="${hasErr ? 'background:#fef2f2;' : ''}">
+                            <td style="padding:3px 6px;border:1px solid #d1fae5;white-space:nowrap;">
+                                <a href="${r.url||'#'}" target="_blank">${r.hsd_id}</a></td>
+                            <td style="padding:3px 6px;border:1px solid #d1fae5;">${r.title||''}</td>
+                            <td style="padding:3px 6px;border:1px solid #d1fae5;white-space:nowrap;">${r.tenant||''}</td>
+                            <td style="padding:3px 6px;border:1px solid #d1fae5;white-space:nowrap;">${r.platform_used||''}</td>
+                            <td style="padding:3px 6px;border:1px solid #d1fae5;">${jiraKeys||'—'}
+                                ${hasErr ? '<br><span style="color:#ef4444">⚠ '+r.errors.map(e=>e.error||e.summary).join('; ')+'</span>' : ''}</td>
+                            <td style="padding:3px 6px;border:1px solid #d1fae5;white-space:nowrap;">${wbCell}</td>
+                            <td style="padding:3px 6px;border:1px solid #d1fae5;white-space:nowrap;">${childLink}</td>
+                        </tr>`;
+                    }
+                    html += '</tbody></table></details>';
+                }
+                if (skipped.length) {
+                    html += `<details style="margin-top:6px;"><summary style="cursor:pointer;font-weight:600;color:#92400e;margin-bottom:4px;">⏭ Skipped (${skipped.length})</summary>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+                    <thead><tr style="background:#fffbeb;text-align:left;">
+                        <th style="padding:4px 6px;border:1px solid #fde68a;">HSD</th>
+                        <th style="padding:4px 6px;border:1px solid #fde68a;">Title</th>
+                        <th style="padding:4px 6px;border:1px solid #fde68a;">Tenant</th>
+                        <th style="padding:4px 6px;border:1px solid #fde68a;">Reason</th>
+                    </tr></thead><tbody>`;
+                    for (const r of skipped) {
+                        html += `<tr>
+                            <td style="padding:3px 6px;border:1px solid #fde68a;white-space:nowrap;">
+                                <a href="${r.url||'#'}" target="_blank">${r.hsd_id}</a></td>
+                            <td style="padding:3px 6px;border:1px solid #fde68a;">${r.title||''}</td>
+                            <td style="padding:3px 6px;border:1px solid #fde68a;white-space:nowrap;">${r.tenant||''}</td>
+                            <td style="padding:3px 6px;border:1px solid #fde68a;color:#78350f;">${r.skip_reason||''}</td>
+                        </tr>`;
+                    }
+                    html += '</tbody></table></details>';
+                }
+                html += '</div><hr style="margin:8px 0;border-color:#e2e8f0;">';
+                return html;
+            }).join('');
+        } catch(e) {
+            body.innerHTML = `<span style="color:#ef4444">Failed to load log: ${e}</span>`;
+        }
+    }
+
+    async function toggleCron(enabled) {
+        await _cronFetch('/hsd2jira/cron/toggle', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({enabled}),
+        });
+        refreshCronStatus();
+    }
+
+    // Poll every 30 s
+    refreshCronStatus();
+    setInterval(refreshCronStatus, 30000);
+
+    // ── TREND sync cron ───────────────────────────────────────────────────────
+    async function refreshTrendCronStatus() {
+        try {
+            const d   = await _cronFetch('/hsd2jira/trend-cron/status');
+            document.getElementById('trendCronToggle').checked = d.enabled;
+            const dot = document.getElementById('trendCronDot');
+            if (d.enabled && d.thread_alive) {
+                dot.style.background = '#8b5cf6'; dot.title = 'Running';
+            } else if (d.enabled) {
+                dot.style.background = '#f59e0b'; dot.title = 'Enabled (starting)';
+            } else {
+                dot.style.background = '#bbb'; dot.title = 'Disabled';
+            }
+            if (d.queries) {
+                const el = document.getElementById('trendCronQueries');
+                if (el) el.textContent = d.queries.join(' · ');
+            }
+            const box = document.getElementById('trendCronStatus');
+            let html = `Queries: <b style="color:#fff">${(d.queries||[]).join(', ')}</b>`;
+            if (d.last_run)    html += `<br>Last run: <b style="color:#fff">${d.last_run}</b>`;
+            if (d.last_result) {
+                const lr = d.last_result;
+                if (lr.error) html += `<br><span style="color:#f87171">Error: ${lr.error}</span>`;
+                else html += `<br>Updated: <b style="color:#a5f3c0">${lr.updated||0}</b> · Skipped: <b style="color:#fff">${lr.skipped||0}</b>` +
+                             (lr.errors ? ` · <span style="color:#f87171">Errors: ${lr.errors}</span>` : '');
+            }
+            if (!d.last_run) html += '<br><i style="color:rgba(255,255,255,0.4)">Never run</i>';
+            box.innerHTML = html;
+        } catch(e) {
+            document.getElementById('trendCronStatus').innerHTML = `<span style="color:#f87171">Could not reach status endpoint — ${e}</span>`;
+        }
+    }
+
+    async function toggleTrendCron(enabled) {
+        await _cronFetch('/hsd2jira/trend-cron/toggle', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({enabled}),
+        });
+        refreshTrendCronStatus();
+    }
+
+    async function showTrendCronLog() {
+        const modal = document.getElementById('trendCronLogModal');
+        const body  = document.getElementById('trendCronLogBody');
+        modal.style.display = 'block';
+        body.innerHTML = 'Loading…';
+        try {
+            const runs = await _cronFetch('/hsd2jira/trend-cron/log');
+            if (!runs.length) { body.innerHTML = '<i>No runs yet.</i>'; return; }
+            const actionLabel = {
+                update_trend:          '<span style="color:#c4b5fd;font-weight:600">TREND ✏️</span>',
+                set_done:              '<span style="color:#86efac;font-weight:600">DONE ✅</span>',
+                update_projected_date: '<span style="color:#93c5fd;font-weight:600">PROJ DATE ✏️</span>',
+                set_verified:          '<span style="color:#6ee7b7;font-weight:600">VERIFIED ✅</span>',
+                update_eta:            '<span style="color:#fcd34d;font-weight:600">ETA ✏️</span>',
+                set_phase_done:        '<span style="color:#86efac;font-weight:600">PHASE=Done ✅</span>',
+                skipped:               '<span style="color:#9ca3af">skipped</span>',
+                error:                 '<span style="color:#f87171">error</span>',
+            };
+            let html = '';
+            runs.forEach((run, ri) => {
+                const s = run.summary || {};
+                html += `<div style="margin-bottom:18px;">
+                  <div style="font-weight:700;font-size:0.85rem;margin-bottom:6px;">
+                    Run ${ri+1}: ${run.run_time} &nbsp;|&nbsp;
+                    Updated: <b>${s.updated||0}</b> &nbsp;
+                    Skipped: <b>${s.skipped||0}</b> &nbsp;
+                    ${s.errors ? `<span style="color:#ef4444">Errors: ${s.errors}</span>` : ''}
+                  </div>
+                  <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+                    <tr style="background:#f3e8ff;">
+                      <th style="padding:4px 6px;border:1px solid #ddd;text-align:left">Feature HSD</th>
+                      <th style="padding:4px 6px;border:1px solid #ddd;text-align:left">Child HSD</th>
+                      <th style="padding:4px 6px;border:1px solid #ddd;text-align:left">Project</th>
+                      <th style="padding:4px 6px;border:1px solid #ddd;text-align:left">Jira</th>
+                      <th style="padding:4px 6px;border:1px solid #ddd;text-align:left">Action</th>
+                      <th style="padding:4px 6px;border:1px solid #ddd;text-align:left">Value / Reason</th>
+                      <th style="padding:4px 6px;border:1px solid #ddd;text-align:left">Title</th>
+                    </tr>`;
+                (run.details||[]).forEach(d => {
+                    const act = actionLabel[d.action] || d.action;
+                    const val = d.value || d.reason || '';
+                    const ok  = d.ok === false ? ' ⚠️' : '';
+                    html += `<tr>
+                      <td style="padding:3px 6px;border:1px solid #e9d5ff;">${d.hsd_id||''}</td>
+                      <td style="padding:3px 6px;border:1px solid #e9d5ff;">${d.child_id||''}</td>
+                      <td style="padding:3px 6px;border:1px solid #e9d5ff;">${d.tag||''}</td>
+                      <td style="padding:3px 6px;border:1px solid #e9d5ff;">${d.sw_record||'—'}</td>
+                      <td style="padding:3px 6px;border:1px solid #e9d5ff;">${act}${ok}</td>
+                      <td style="padding:3px 6px;border:1px solid #e9d5ff;">${val}</td>
+                      <td style="padding:3px 6px;border:1px solid #e9d5ff;color:#64748b;font-size:0.72rem;">${d.title||''}</td>
+                    </tr>`;
+                });
+                html += '</table></div>';
+            });
+            body.innerHTML = html;
+        } catch(e) {
+            body.innerHTML = `<span style="color:#ef4444">Failed to load log: ${e}</span>`;
+        }
+    }
+
+    refreshTrendCronStatus();
+    setInterval(refreshTrendCronStatus, 30000);
+
+    function useQuery(url) {
+        // Reset to phase 1 so the input is visible, then fill it
+        const p1 = document.getElementById('qPhase1');
+        const p2 = document.getElementById('qPhase2');
+        if (p1) p1.style.display = 'block';
+        if (p2) p2.style.display = 'none';
+        document.getElementById('queryUrl').value = url;
+        document.getElementById('queryCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function createInJira() {
+        const platform   = document.getElementById('platformName').value.trim();
+        const title      = document.getElementById('featureTitle').value.trim();
+        const comp1      = document.getElementById('component').value.trim();
+        const comp2      = document.getElementById('component2').value.trim();
+        const components = [comp1, comp2].filter(Boolean);
+        const assignee   = document.getElementById('assignee').value.trim();
+        if (!platform || !title || !comp1 || !assignee) { 
+            alert('Please fill in all required fields.'); 
+            return; 
+        }
+
+        const btn = document.getElementById('createBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Creating in Jira…';
+
+        try {
+            const resp = await fetch('/hsd2jira/create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    platform: platform,
+                    feature_title: title,
+                    components: components,
+                    assignee: assignee
+                }),
+            });
+            const data = await resp.json();
+            if (data.error && !data.created?.length) {
+                showError(data.error);
+                btn.disabled = false;
+                btn.innerHTML = '✅ Create in Jira';
+                return;
+            }
+            renderResults(data, platform, title, components, assignee);
+            btn.innerHTML = '✓ Done!';
+        } catch (err) {
+            showError('Network error: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = '✅ Create in Jira';
+        }
+    }
+
+    function renderResults(data, platform, title, components, assignee) {
+        const grid = document.getElementById('resultsGrid');
+        grid.innerHTML = '';
+        (data.created || []).forEach(item => {
+            const level = item.level || 0;
+            const typeClass = item.type === 'Epic' ? 'epic' : 
+                             item.type === 'Task' ? 'task' :
+                             item.type === 'Child Story' ? 'child' : 'story';
+            const badgeLabel = item.type === 'Epic' ? 'EPIC' : 
+                              item.type === 'Task' ? 'TASK' :
+                              item.type === 'Child Story' ? 'CHILD' : 'STORY';
+            const el = document.createElement('div');
+            el.className = `result-item ${typeClass} level-${level}`;
+            el.innerHTML = `
+                <span class="type-badge ${item.badge}">${badgeLabel}</span>
+                <span class="result-key"><a href="${item.url}" target="_blank">${item.key}</a></span>
+                <span class="result-summary">${esc(item.summary)}</span>
+                <span class="result-note">${item.note}</span>
+                <button class="copy-link-btn" onclick="copyText('${esc(item.url)}',this)">Copy link</button>
+            `;
+            grid.appendChild(el);
+        });
+        (data.errors || []).forEach(e => {
+            const el = document.createElement('div');
+            el.className = 'error-box';
+            el.textContent = `⚠ Failed: ${e.summary} — ${e.error}`;
+            grid.appendChild(el);
+        });
+        const n = data.created?.length || 0;
+        document.getElementById('countPill').textContent = `${n} issue${n !== 1 ? 's' : ''} created`;
+        document.getElementById('resultsSubtitle').textContent =
+            `Platform: ${platform}  ·  "${title}"  ·  Components: ${components.join(', ')}  ·  Assignee: ${assignee}  ·  Epic: ${data.epic_key}`;
+        document.getElementById('results').style.display = 'block';
+        document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+    }
+
+    function showError(msg) {
+        document.getElementById('resultsGrid').innerHTML = `<div class="error-box">⚠ ${esc(msg)}</div>`;
+        document.getElementById('countPill').textContent = 'Error';
+        document.getElementById('resultsSubtitle').textContent = '';
+        document.getElementById('results').style.display = 'block';
+    }
+
+    function resetForm() {
+        document.getElementById('platformName').value  = '';
+        document.getElementById('featureTitle').value = '';
+        document.getElementById('component').value  = 'XeKMD';
+        document.getElementById('component2').value = '';
+        document.getElementById('assignee').value = 'mtangri';
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('resultsGrid').innerHTML = '';
+        const btn = document.getElementById('createBtn');
+        btn.disabled = false;
+        btn.innerHTML = '✅ Create in Jira';
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function copyText(text, btn) {
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = '✓';
+            setTimeout(() => { btn.textContent = 'Copy link'; }, 1500);
+        });
+    }
+
+    function esc(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    ['platformName','featureTitle','component','component2','assignee'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') createInJira();
+        });
+    });
+
+    // ── HSD Query flow ────────────────────────────────────────────────────────
+
+    let _queryPreviewData = null;
+
+    document.getElementById('queryUrl').addEventListener('keydown', e => {
+        if (e.key === 'Enter') previewQuery();
+    });
+
+    async function previewQuery() {
+        const url = document.getElementById('queryUrl').value.trim();
+        if (!url) { alert('Please enter a query URL or HSD article URL.'); return; }
+
+        const btn = document.getElementById('qPreviewBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Fetching from HSD…';
+
+        try {
+            const resp = await fetch('/hsd2jira/preview-hsd-query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query_url: url }),
+            });
+            const data = await resp.json();
+
+            if (data.error) {
+                alert('Error: ' + data.error);
+                btn.disabled = false;
+                btn.innerHTML = '🔍 Preview HSDs in Query';
+                return;
+            }
+
+            _queryPreviewData = data;
+            renderQueryPreview(data);
+            document.getElementById('qPhase1').style.display = 'none';
+            document.getElementById('qPhase2').style.display = 'block';
+        } catch (err) {
+            alert('Network error: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = '🔍 Preview HSDs in Query';
+        }
+    }
+
+    function renderQueryPreview(data) {
+        const summaryEl = document.getElementById('qPreviewSummary');
+        summaryEl.innerHTML = `
+            <div class="prow"><span class="plabel">Total HSDs in query</span><span class="pval bold">${data.total}</span></div>
+            <div class="prow"><span class="plabel">Will process</span><span class="pval bold" style="color:#2e7d32">${data.actionable} (exposure = high/medium/low)</span></div>
+            <div class="prow"><span class="plabel">Will skip</span><span class="pval">${data.skipped}</span></div>
+        `;
+
+        const tableEl = document.getElementById('qPreviewTable');
+        if (!data.items || !data.items.length) {
+            tableEl.innerHTML = '<div class="hint">No HSDs found.</div>';
+            return;
+        }
+
+        let html = '<table class="preview-table"><thead><tr>';
+        html += '<th>HSD ID</th><th>Title</th><th>Tenant</th><th>Release</th><th>Auto Platform</th><th>Core Exposure</th><th>Status</th>';
+        html += '</tr></thead><tbody>';
+
+        data.items.forEach(item => {
+            html += `<tr>`;
+            html += `<td><a href="${esc(item.url)}" target="_blank" style="color:#7b1fa2;font-weight:700">${esc(item.hsd_id)}</a></td>`;
+            html += `<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.title)}">${esc(item.title)}</td>`;
+            html += `<td>${esc(item.tenant || '—')}</td>`;
+            html += `<td style="font-size:0.68rem">${esc(item.release || '—')}</td>`;
+            html += `<td>${item.auto_platform ? `<strong style="color:#7b1fa2">${esc(item.auto_platform)}</strong>` : '<span style="color:#ccc">—</span>'}</td>`;
+            html += `<td><strong>${item.core_ar ? esc(item.core_ar.exposure || '—') : '—'}</strong></td>`;
+            if (item.actionable) {
+                html += `<td><span class="tag-actionable">✅ Will process</span></td>`;
+            } else {
+                html += `<td><span class="tag-skipped">⏭ Skip</span> <span style="font-size:0.65rem;color:#aaa">${esc(item.skip_reason || '')}</span></td>`;
+            }
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        tableEl.innerHTML = html;
+    }
+
+    function resetQueryForm() {
+        _queryPreviewData = null;
+        document.getElementById('qPhase2').style.display = 'none';
+        document.getElementById('qPhase1').style.display = 'block';
+        const btn = document.getElementById('qPreviewBtn');
+        btn.disabled = false;
+        btn.innerHTML = '🔍 Preview HSDs in Query';
+    }
+
+    function resetQueryFull() {
+        resetQueryForm();
+        document.getElementById('queryUrl').value = '';
+        document.getElementById('queryResults').style.display = 'none';
+        document.getElementById('queryResultsGrid').innerHTML = '';
+        const qBtn = document.getElementById('qProcessBtn');
+        qBtn.disabled = false;
+        qBtn.innerHTML = '✅ Process All Actionable HSDs';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function processQuery() {
+        const url        = document.getElementById('queryUrl').value.trim();
+        const platform   = document.getElementById('qPlatform').value.trim();
+        const comp1      = document.getElementById('qComponent').value.trim();
+        const comp2      = document.getElementById('qComponent2').value.trim();
+        const components = [comp1, comp2].filter(Boolean);
+        const assignee    = document.getElementById('qAssignee').value.trim();
+        const projectTag  = document.getElementById('qProjectTag').value.trim();
+
+        if (!projectTag) {
+            alert('Project tag is required. Please enter a tag (e.g. EXI, TGS, JGS).');
+            document.getElementById('qProjectTag').focus();
+            return;
+        }
+
+        const btn = document.getElementById('qProcessBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Processing HSDs…';
+
+        try {
+            const resp = await fetch('/hsd2jira/process-hsd-query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query_url: url, platform, components, assignee, project_tag: projectTag }),
+            });
+            const data = await resp.json();
+
+            if (data.error && !data.results) {
+                showQueryError(data.error);
+                btn.disabled = false;
+                btn.innerHTML = '✅ Process All Actionable HSDs';
+                return;
+            }
+
+            renderQueryResults(data);
+            btn.innerHTML = '✓ Done!';
+        } catch (err) {
+            showQueryError('Network error: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = '✅ Process All Actionable HSDs';
+        }
+    }
+
+    function renderQueryResults(data) {
+        const grid = document.getElementById('queryResultsGrid');
+        grid.innerHTML = '';
+
+        document.getElementById('qCountPill').textContent =
+            `${data.processed_count} processed`;
+        document.getElementById('qResultsSubtitle').textContent =
+            `Total: ${data.total_hsd} HSDs · Processed: ${data.processed_count} · Skipped: ${data.skipped_count} · Jira issues: ${data.total_jira_issues}`;
+
+        (data.results || []).forEach(r => {
+            const card = document.createElement('div');
+            card.className = 'query-result-card' + (r.skipped ? ' skipped' : '');
+
+            const statusBadge = r.skipped
+                ? '<span class="tag-skipped">SKIPPED</span>'
+                : '<span class="tag-actionable">PROCESSED</span>';
+
+            let inner = `<div class="query-result-header">
+                <span class="query-result-hsd-id">
+                    <a href="${esc(r.url)}" target="_blank" style="color:#7b1fa2;text-decoration:none">${esc(r.hsd_id)}</a>
+                </span>
+                <span class="query-result-title">${esc(r.title)}</span>
+                ${statusBadge}
+            </div>`;
+
+            if (r.skipped) {
+                inner += `<div style="font-size:0.72rem;color:#aaa">↳ ${esc(r.skip_reason || '')}</div>`;
+            } else {
+                // CC Story
+                const ccItem = (r.created_jira || []).find(j => j.badge === 'badge-story-cc');
+                if (ccItem) {
+                    const platTag = r.platform_used
+                        ? ` &nbsp;·&nbsp; platform=<strong>${esc(r.platform_used)}</strong>${r.platform_used === 'tiger_shores' ? ' <span style="color:#7b1fa2">(auto: alpine release)</span>' : ''}`
+                        : '';
+                    inner += `<div style="font-size:0.72rem;margin-bottom:5px">
+                        CC Story: <a href="${esc(ccItem.url)}" target="_blank" style="font-weight:700;color:#0071c5">${esc(ccItem.key)}</a>
+                        &nbsp;·&nbsp; <strong>${r.created_jira.length}</strong> Jira issues${platTag}
+                    </div>`;
+                }
+
+                // New HSD child
+                if (r.new_hsd_child_id) {
+                    inner += `<div style="font-size:0.72rem;margin-bottom:5px">
+                        New HSD AR child:
+                        <a href="https://hsdes.intel.com/appstore/article-one/#/${esc(r.new_hsd_child_id)}"
+                           target="_blank" style="font-weight:700;color:#7b1fa2">${esc(r.new_hsd_child_id)}</a>
+                        &nbsp;(team=i915_kmd · jira_key=${esc(r.cc_story_key || '')} · task=development)
+                        ${r.hsd_writeback_ok ? '<span style="color:#2e7d32">✓</span>' : '<span style="color:#e53935">⚠</span>'}
+                    </div>`;
+                } else {
+                    inner += `<div style="font-size:0.72rem;color:#e53935;margin-bottom:5px">⚠ HSD child creation failed</div>`;
+                }
+
+                // Jira issues
+                if (r.created_jira && r.created_jira.length > 0) {
+                    inner += '<div style="margin-top:8px">';
+                    r.created_jira.forEach(item => {
+                        const typeClass = item.type === 'Epic' ? 'epic' :
+                                          item.type === 'Task' ? 'task' :
+                                          item.type === 'Child Story' ? 'child' : 'story';
+                        inner += `<div class="result-item ${typeClass} level-${item.level}" style="margin-bottom:3px">
+                            <span class="type-badge ${esc(item.badge)}">${esc(item.type.replace('Child Story','CHILD').replace('Story','STORY').replace('Task','TASK').replace('Epic','EPIC'))}</span>
+                            <span class="result-key"><a href="${esc(item.url)}" target="_blank">${esc(item.key)}</a></span>
+                            <span class="result-summary">${esc(item.summary)}</span>
+                        </div>`;
+                    });
+                    inner += '</div>';
+                }
+
+                // Errors
+                (r.errors || []).forEach(e => {
+                    inner += `<div class="error-box" style="margin-top:4px;font-size:0.72rem">⚠ ${esc(e.summary)}: ${esc(e.error)}</div>`;
+                });
+            }
+
+            card.innerHTML = inner;
+            grid.appendChild(card);
+        });
+
+        document.getElementById('queryResults').style.display = 'block';
+        document.getElementById('queryResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function showQueryError(msg) {
+        document.getElementById('queryResultsGrid').innerHTML =
+            `<div class="error-box">⚠ ${esc(msg)}</div>`;
+        document.getElementById('qCountPill').textContent = 'Error';
+        document.getElementById('qResultsSubtitle').textContent = '';
+        document.getElementById('queryResults').style.display = 'block';
+    }
+
+    async function createFromArOwnerHsd() {
+        const hsdUrl    = document.getElementById('ownerHsdUrl').value.trim();
+        const owner     = document.getElementById('ownerArName').value.trim();
+        const platform  = document.getElementById('ownerArPlatform').value.trim();
+        const component = document.getElementById('ownerArComponent').value.trim() || 'XeKMD';
+        const component2 = document.getElementById('ownerArComponent2').value.trim();
+
+        if (!hsdUrl || !owner) {
+            alert('Please provide HSD URL and owner.');
+            return;
+        }
+
+        const btn = document.getElementById('ownerArCreateBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Creating Jira structures…';
+
+        try {
+            const resp = await fetch('/hsd2jira/create-from-ar-owner-hsd', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    hsd_url: hsdUrl,
+                    owner: owner,
+                    platform: platform,
+                    component: component,
+                    component2: component2,
+                }),
+            });
+            const data = await resp.json();
+            if (data.error) {
+                showOwnerArError(data.error);
+                btn.disabled = false;
+                btn.innerHTML = '✅ Create Owner-based Jira Structures';
+                return;
+            }
+
+            renderOwnerArResults(data);
+            btn.innerHTML = '✓ Done!';
+        } catch (err) {
+            showOwnerArError('Network error: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = '✅ Create Owner-based Jira Structures';
+        }
+    }
+
+    function renderOwnerArResults(data) {
+        const grid = document.getElementById('ownerArResultsGrid');
+        grid.innerHTML = '';
+
+        document.getElementById('ownerArCountPill').textContent =
+            `${data.processed_count || 0} processed`;
+        const compUsed = Array.isArray(data.component_used)
+            ? data.component_used.join(', ')
+            : (data.component_used || '');
+        document.getElementById('ownerArResultsSubtitle').textContent =
+            `HSD: ${data.hsd_id} · Tenant: ${data.tenant || '—'} · Owner: ${data.owner_filter} · Platform: ${data.platform_used} · Components: ${compUsed} · Processed: ${data.processed_count || 0} · Skipped: ${data.skipped_count || 0} · Jira issues: ${data.total_jira_issues || 0}`;
+
+        (data.results || []).forEach(r => {
+            const card = document.createElement('div');
+            card.className = 'query-result-card' + (r.skipped ? ' skipped' : '');
+
+            const statusBadge = r.skipped
+                ? '<span class="tag-skipped">SKIPPED</span>'
+                : '<span class="tag-actionable">PROCESSED</span>';
+
+            let inner = `<div class="query-result-header">
+                <span class="query-result-hsd-id">
+                    <a href="https://hsdes.intel.com/appstore/article-one/#/${esc(r.child_hsd_id || '')}" target="_blank" style="color:#0071c5;text-decoration:none">${esc(r.child_hsd_id || '')}</a>
+                </span>
+                <span class="query-result-title">${esc(r.jira_title || r.title || '')}</span>
+                ${statusBadge}
+            </div>`;
+
+            inner += `<div style="font-size:0.72rem;margin-bottom:5px;color:#555">Owner: <strong>${esc(r.ar_owner || '')}</strong></div>`;
+            inner += `<div style="font-size:0.72rem;margin-bottom:5px;color:#555">Writeback field: <strong>${esc(r.writeback_field || '')}</strong></div>`;
+
+            if (r.skipped) {
+                inner += `<div style="font-size:0.72rem;color:#aaa">↳ ${esc(r.skip_reason || '')}</div>`;
+            } else {
+                if (r.cc_story_key) {
+                    inner += `<div style="font-size:0.72rem;margin-bottom:5px">
+                        CC Story: <strong>${esc(r.cc_story_key)}</strong>
+                        ${r.writeback_ok ? '<span style="color:#2e7d32">✓ writeback OK</span>' : '<span style="color:#e53935">⚠ writeback failed</span>'}
+                    </div>`;
+                }
+
+                if (r.created_jira && r.created_jira.length > 0) {
+                    inner += '<div style="margin-top:8px">';
+                    r.created_jira.forEach(item => {
+                        const typeClass = item.type === 'Epic' ? 'epic' :
+                                          item.type === 'Task' ? 'task' :
+                                          item.type === 'Child Story' ? 'child' : 'story';
+                        inner += `<div class="result-item ${typeClass} level-${item.level}" style="margin-bottom:3px">
+                            <span class="type-badge ${esc(item.badge)}">${esc(item.type.replace('Child Story','CHILD').replace('Story','STORY').replace('Task','TASK').replace('Epic','EPIC'))}</span>
+                            <span class="result-key"><a href="${esc(item.url)}" target="_blank">${esc(item.key)}</a></span>
+                            <span class="result-summary">${esc(item.summary)}</span>
+                        </div>`;
+                    });
+                    inner += '</div>';
+                }
+
+                (r.errors || []).forEach(e => {
+                    inner += `<div class="error-box" style="margin-top:4px;font-size:0.72rem">⚠ ${esc(e.summary)}: ${esc(e.error)}</div>`;
+                });
+            }
+
+            card.innerHTML = inner;
+            grid.appendChild(card);
+        });
+
+        document.getElementById('ownerArResults').style.display = 'block';
+        document.getElementById('ownerArResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function showOwnerArError(msg) {
+        document.getElementById('ownerArResultsGrid').innerHTML =
+            `<div class="error-box">⚠ ${esc(msg)}</div>`;
+        document.getElementById('ownerArCountPill').textContent = 'Error';
+        document.getElementById('ownerArResultsSubtitle').textContent = '';
+        document.getElementById('ownerArResults').style.display = 'block';
+    }
+
+    ['ownerHsdUrl','ownerArName','ownerArPlatform','ownerArComponent','ownerArComponent2'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') createFromArOwnerHsd();
+        });
+    });
+</script>
+</body>
+</html>
