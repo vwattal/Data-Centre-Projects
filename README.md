@@ -5,6 +5,15 @@ Runs on port 8888. Each tool is a Flask Blueprint under `routes/`.
 
 ---
 
+## Hosting & Handover
+
+- **Live URL:** http://10.88.27.190:8888/
+- **NUC credentials:** username and password with Rajesh Ramachandran
+- **Code repository:** https://github.com/intel-sandbox/DataCentreProject
+- **Kerberos:** whoever takes over must ensure the Kerberos ticket is active and auto-renewal is configured — see `scripts/auto_renew_kerberos.sh`
+
+---
+
 ## Quick Start (new machine setup)
 
 ### 1. Prerequisites
