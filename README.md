@@ -131,13 +131,19 @@ data_centre_landing/
 | `/jgs-4plus2` | `jgs_4plus2` | JGS 4+2 tracking dashboard. HSD + Jira rows per owner (Rodrigo→xeKMD, Erez→UALkmd, Mrozek→UMD-L0, Santosh→Sysman). Editable ETA and Comments persisted in SQLite, shared across users with 60-second polling. | **Excel:** Rodrigo Vivi's personal OneDrive (SharePoint), downloaded via Microsoft Graph API. **HSD REST API** (Kerberos) for title lookup. **SQLite:** `../JGS_4+2/jgs4plus2.db`. |
 | `/cri-e2e` | `cri_e2e` | CRI E2E plan. Two tables: (1) CRI HSD features with linked Jira chips and BMG support flag, (2) XPUM/Sysman features with status, dependencies, ETAs, remarks. Per-row editable comments. | **Excel:** `config.CRI_EXCEL` (`CRI Pre-Map Day.xlsx`) — sheets `weekly_updates` (rows 1–46), `GT_DCN`, `KMD` (cols H–L for Jira cross-ref). **PPTX:** `config.CRI_PPTX` (`CRI_XPUM_E2E_FEATURE_REVIEW.pptx`) slides 1–5 for XPUM/Sysman (downloaded from SharePoint via Graph API). Comments in `config.E2E_COMMENTS` (`e2e_comments.json`). |
 | `/cri-ccb` | `cri_ccb` | CRI CCB strawman HSD tracker. Shows per-component AR sign-off status (XeKMD, Sysman, XPUM, E2E) for each strawman feature. Stale indicator if cache > 30 min old. | **HSD query:** `13013902803` (tenant `server_platf`, subject `feature`). AR children fetched via HSD ESService `get_related_records`, sign-off status via HSD REST per AR. Kerberos auth. Results cached in **SQLite:** `cri_ccb.db`. |
+| `/cri-ccb-kmd` | `cri_ccb_kmd` | CRI CCB KMD-only view. XeKMD sign-off status, impact scope, scoping ETA, effort estimate and Jira link per strawman HSD. Shows `Pending ETA` where scoping is in progress. Background refresh with 8-second auto-reload only when cache is empty (not on every load). | **HSD query:** same CRI CCB query. **Jira REST API** for linked story status. Kerberos + Jira token. Cached in **SQLite:** `cri_ccb_kmd.db`. |
 | `/cri-daily-tf` | `cri_daily_tf` | CRI Daily TF pending driver features. Two editable tables (XPUM/Sysman and XeKMD). All columns (Feature, Priority, TF Meeting Minutes, ETA, Blocker) editable inline and persisted server-side. 30-second polling for multi-user sync. PowerPoint export (`/export-slides`). | **Excel:** SharePoint "Pending Driver Features enabling.xlsx" (Crescent Island site), sheets `Xpum_Sysman` and `XeKMD_pending`. Downloaded via Microsoft Graph API, cached in `/tmp/`. Edits in **SQLite:** `cri_daily_tf.db`. |
 | `/backlog-orchestrator` | `backlog` | Jira backlog manager. Fetches issues by scope (My Backlog / Entire Project / Board / custom JQL), applies text-based rules to bucket into P1–P4, optionally re-ranks issues on the Jira agile board. | **Jira REST API:** project VLK. Token: `config.BACKLOG_TOKEN_PATH` (`../HSD2Jira2HSD/.jira_token`). |
 | `/hsd2jira` | `hsd2jira` | HSD→Jira automation. Converts Intel HSD `dg_soc.feature` articles into a 9-issue Jira hierarchy (Epic → Code Complete parent/child stories → Sim/Emu stories → Upstream task/story). Three flows: bulk HSD query, single HSD link, or manual entry. Writes Jira key back to HSD AR child. Includes a background cron. | Loaded dynamically from `../HSD2Jira2HSD/`. **HSD REST + ESService** (Kerberos). **Jira REST API**, token at `config.HSD2JIRA_TOKEN_PATH`. |
 
-External links on the landing page (separate services, not in this repo):
-- `http://<host>:5050` — CRI Weekly Updates
-- `http://<host>:8080` — CRI WA Dashboard
+External links and services referenced on the landing page (not in this repo):
+
+| Card | Target | Notes |
+|---|---|---|
+| GT IP (JGS section) | SharePoint Excel | Static link — no server needed. Update the URL in `templates/index.html` if the file moves. |
+| GT SW E2E plan for EXI | `http://10.88.27.190:8889/xe5-dcn-status` | Served by the **HSD2JiraTool** Flask app on port **8889** — separate process. See `github.com/intel-sandbox/…` (HSD2JiraTool repo). Must be running independently. |
+| CRI WA Dashboard | `http://10.88.27.190:8080/` | Separate service — not in this repo. |
+| Reference Links row | Various SharePoint/Teams URLs | Static links only — no server dependency. Update URLs in `templates/index.html` if they change. |
 
 ---
 
@@ -151,6 +157,22 @@ For production-safe ownership transition and auto-renewed Kerberos setup, see:
 - `docs/KERBEROS_HANDOFF.md`
 - `scripts/start_landing_with_kerberos.sh`
 - `scripts/check_landing_kerberos.sh`
+
+---
+
+## Credentials & Tokens Checklist (for new maintainer)
+
+When taking over this tool, every credential below is tied to the **previous owner's Intel account** and will stop working the day that account is deactivated. Replace each one under your own account before going live.
+
+| Credential | Used by | Where it lives | What to do |
+|---|---|---|---|
+| **Kerberos ticket** | All HSD pages (`/cri-ccb`, `/cri-ccb-kmd`, `/jgs-bug-triage`, `/jgs-emu-bugs`, `/jgs-4plus2`, `/hsd2jira`) | OS credential cache (not a file) | Run `kinit YOUR_IDSID@AMR.CORP.INTEL.COM`. Set up cron auto-renewal via `scripts/auto_renew_kerberos.sh` |
+| **Jira PAT** (this app) | `/jgs-upstreaming`, `/backlog-orchestrator`, `/hsd2jira`, `/cri-ccb-kmd` | `.jira_token` (path set in `config.py` → `HSD2JIRA_TOKEN_PATH`) | Create new PAT at jira.devtools.intel.com → Profile → Personal Access Tokens. `echo "TOKEN" > .jira_token` |
+| **Jira PAT** (HSD2JiraTool) | `/backlog-orchestrator` uses the sibling repo's token | `../HSD2Jira2HSD/.jira_token` (path set in `config.py` → `BACKLOG_TOKEN_PATH`) | Same as above — separate file in the HSD2JiraTool repo |
+| **Microsoft Graph token** (SharePoint) | `/jgs-soc-updates` (JGS_SOC_Trend.xlsx), `/cri-e2e` (PPTX), `/cri-daily-tf` (pending features Excel), `/jgs-4plus2` (Rodrigo's OneDrive) | Token refresh handled by scripts in `soc_automation/` | Run the token-refresh script in `soc_automation/` — this generates a new access token via device-code flow or stored refresh token. Ask previous maintainer for the client ID / tenant details. |
+| **Teams webhook URL** | `/jgs-emu-bugs` — @mention DM notifications | `routes/webhook_config.json` (gitignored) | Open the JGS Emu Bugs page → settings → paste your team's Power Automate HTTP trigger URL. |
+
+> **Note on Jira PAT expiry:** Even a token set to "never expire" is revoked the moment the issuing Intel account is deactivated. Always create tokens under your own account.
 
 ---
 
