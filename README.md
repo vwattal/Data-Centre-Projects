@@ -138,6 +138,11 @@ External links on the landing page (separate services, not in this repo):
 - **Jira Bearer token** — stored in `.jira_token` files (see `config.py`). Never committed.
 - **Microsoft Graph (SharePoint)** — token refresh scripts live in `soc_automation/`. The app calls them as subprocesses when auto-refreshing Excel files.
 
+For production-safe ownership transition and auto-renewed Kerberos setup, see:
+- `docs/KERBEROS_HANDOFF.md`
+- `scripts/start_landing_with_kerberos.sh`
+- `scripts/check_landing_kerberos.sh`
+
 ---
 
 ## Server management
@@ -155,6 +160,9 @@ fuser -k 8888/tcp
 # Logs
 tail -f /tmp/dc_landing.log
 ```
+
+Recommended for durable operations: run via `k5start` wrapper instead of raw `nohup`.
+See `docs/KERBEROS_HANDOFF.md`.
 
 ---
 

@@ -14,6 +14,11 @@ venv/
 # HSD2Jira cron state (runtime, not source)
 hsd2jira_cron.json
 hsd2jira_cron_log.json
+hsd2jira_trend_cron.json
+hsd2jira_trend_cron_log.json
+
+# Auto-generated status files (runtime)
+AUTO_RENEWAL_STATUS.md
 
 # User-editable JSON data (runtime state)
 user_data.json

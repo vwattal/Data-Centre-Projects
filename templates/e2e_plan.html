@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CRI E2E Plan</title>
+  <title>CRI All Features - Low level driver</title>
   <style>
     :root {
       --intel-blue: #0068b5;
@@ -136,6 +136,21 @@
     .pcell.saving{ border-color:#f5c589; }
     .pcell.saved { border-color:#90d4a8; }
 
+    /* ── STATUS SELECT ── */
+    .status-select{
+      -webkit-appearance:none; appearance:none;
+      width:100%; padding:2px 6px;
+      border-radius:5px; font-size:10px; font-weight:600;
+      cursor:pointer; border:1px solid var(--border);
+      background:#f5f5f5; color:#555;
+      text-align:center; outline:none;
+      transition:background .15s,border-color .15s;
+    }
+    .status-select:focus{ box-shadow:0 0 0 2px rgba(0,104,181,.15); }
+    .status-select[data-val="Not Started"]{ background:#f5f5f5; color:#555;    border-color:#ccc; }
+    .status-select[data-val="In Progress"]{ background:#e8f4fd; color:#0057a0; border-color:#9bc8ef; }
+    .status-select[data-val="Done"]       { background:#d4edda; color:#155724; border-color:#b1dfbb; }
+
     /* ── STATUS BADGE ── */
     .status-badge{
       display:inline-block; padding:1px 6px; border-radius:7px;
@@ -160,7 +175,7 @@
 
 <header>
   <div class="left">
-    <h1>🧭 CRI E2E Plan</h1>
+    <h1>🧭 CRI All Features - Low level driver (kmd+umd+xpum+sysman)</h1>
     <div class="sub">Crescent Island · End-to-End Issue Tracker · All components</div>
   </div>
   <div class="right">
@@ -170,13 +185,13 @@
 </header>
 
 <div class="nav-tabs">
-  <div class="nav-tab active">📋 E2E Plan</div>
+  <div class="nav-tab active">📋 CRI All Features</div>
 </div>
 
 <div class="legend-bar">
   <span><span style="display:inline-block;width:10px;height:10px;background:var(--intel-blue);border-radius:2px"></span> SW Only</span>
   <span><span style="display:inline-block;width:10px;height:10px;background:var(--orange);border-radius:2px"></span> HW+SW</span>
-  <span><span style="display:inline-block;width:10px;height:10px;background:var(--teal);border-radius:2px"></span> GT DCN</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:var(--teal);border-radius:2px"></span> CRI GT Features</span>
   <span><span class="jira-chip chip-vlk">VLK</span> KMD</span>
   <span><span class="jira-chip chip-xpum">XPUM</span> xpuM</span>
   <span><span class="jira-chip chip-neo">NEO</span> NEO/Sysman</span>
@@ -187,19 +202,33 @@
 <div class="container">
 
   <div class="page-title">
-    <h2>CRI Issues — Full E2E Tracking</h2>
+    <h2>CRI All Features — Low level driver (kmd+umd+xpum+sysman)</h2>
     <span class="tag">{{ cri_rows|length }} issues</span>
+    <span class="tag" style="background:var(--teal)">{{ gtdcn_rows|length }} CRI GT Features</span>
     <span class="tag" style="background:var(--purple)">{{ xpum_rows|length }} XPUM/Sysman tasks</span>
+    <a href="/cri-e2e/export/all"
+       style="margin-left:auto;padding:4px 14px;background:#1f4e79;color:#fff;border-radius:4px;
+              font-size:11px;text-decoration:none;white-space:nowrap;font-weight:700;"
+       title="Download all three tables as Excel">⬇ Export All</a>
   </div>
 
   <div class="main-grid">
 
-    <!-- ══ LEFT: CRI Issues ══ -->
+    <!-- ══ LEFT: CRI Issues + GT DCN ══ -->
+    <div style="display:flex;flex-direction:column;gap:10px">
     <div class="section-card">
       <div class="section-header">
-        <span class="sh-badge" style="background:var(--intel-blue)">📌 CRI ISSUES</span>
-        <span class="sh-title">SW Only + HW+SW Updates + GT DCN</span>
+        <span class="sh-badge" style="background:var(--intel-blue)">📌 CRI SOC QUERY FEATURES</span>
+        <span class="sh-title">SW Only + HW+SW Updates</span>
         <span class="sh-count">{{ cri_rows|length }} rows</span>
+        {% if sp_fetched_at %}
+        <span style="font-size:10px;color:var(--muted)"
+              title="Source: {{ sp_file }}">📥 SharePoint sync: {{ sp_fetched_at }}</span>
+        {% endif %}
+        <a href="/cri-e2e/export/cri"
+           style="margin-left:auto;padding:3px 10px;background:var(--intel-blue);color:#fff;
+                  border-radius:4px;font-size:11px;text-decoration:none;white-space:nowrap;"
+           title="Export CRI Issues to Excel">⬇ Excel</a>
       </div>
       <div class="table-wrap">
         <table>
@@ -209,6 +238,7 @@
               <th style="width:96px">HSD ID</th>
               <th>Title</th>
               <th style="width:160px">JIRA(s)</th>
+              <th style="width:88px">Status ✏️</th>
               <th style="width:78px">Supported BMG ✏️</th>
               <th style="width:120px">Comments ✏️</th>
             </tr>
@@ -219,10 +249,9 @@
               {%- if row.section != ns.last_section -%}
                 {%- set ns.last_section = row.section -%}
                 <tr class="divider-row">
-                  <td colspan="6">
+                  <td colspan="7">
                     {% if row.section == 'sw_only' %}🔵 SW Only Updates
-                    {% elif row.section == 'hw+sw' %}🟠 HW + SW Updates
-                    {% else %}🟢 GT DCN{% endif %}
+                    {% else %}🟠 HW + SW Updates{% endif %}
                   </td>
                 </tr>
               {%- endif -%}
@@ -239,6 +268,14 @@
                   <span class="no-jira">—</span>
                 {% endif %}
               </td>
+              <td>
+                <select class="status-select" data-key="{{ row.key_status }}" data-val="{{ row.status_val }}">
+                  <option value=""          {% if not row.status_val             %}selected{% endif %}>—</option>
+                  <option value="Not Started" {% if row.status_val == 'Not Started' %}selected{% endif %}>Not Started</option>
+                  <option value="In Progress" {% if row.status_val == 'In Progress' %}selected{% endif %}>In Progress</option>
+                  <option value="Done"        {% if row.status_val == 'Done'        %}selected{% endif %}>Done</option>
+                </select>
+              </td>
               <td><div class="pcell" data-key="{{ row.key_bmg }}" contenteditable="true">{{ row.bmg }}</div></td>
               <td><div class="pcell" data-key="{{ row.key_cmt }}" contenteditable="true" style="min-height:28px;white-space:pre-wrap">{{ row.comment }}</div></td>
             </tr>
@@ -248,33 +285,83 @@
       </div>
     </div>
 
-    <!-- ══ RIGHT: XPUM / Sysman ══ -->
+    <!-- ══ GT DCN — below HW+SW, non-editable ══ -->
     <div class="section-card">
-      <div class="section-header purple">
-        <span class="sh-badge" style="background:var(--purple)">⚙ XPUM / SYSMAN</span>
-        <span class="sh-count">{{ xpum_rows|length }}</span>
+      <div class="section-header teal">
+        <span class="sh-badge" style="background:var(--teal)">CRI GT FEATURES</span>
+        <span class="sh-title">CRI GT Features Status</span>
+        <span class="sh-count">{{ gtdcn_rows|length }}</span>
+        <a href="/cri-e2e/export/gtdcn"
+           style="margin-left:auto;padding:3px 10px;background:var(--teal);color:#fff;
+                  border-radius:4px;font-size:11px;text-decoration:none;white-space:nowrap;"
+           title="Export GT DCN to Excel">⬇ Excel</a>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th style="width:70px">Section</th>
+              <th style="width:96px">HSD ID</th>
+              <th>Title</th>
+              <th style="min-width:140px">JIRA(s)</th>
+              <th style="width:88px">Status ✏️</th>
+              <th style="width:120px">Notes ✏️</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in gtdcn_rows %}
+            <tr data-section="gt_dcn">
+              <td><a class="hsd-link" href="{{ row.hsd_link }}" target="_blank" rel="noopener">{{ row.hsd_id }}</a></td>
+              <td class="title-cell">{{ row.title }}</td>
+              <td>
+                {% if row.chips %}
+                  {% for c in row.chips %}
+                    <a class="jira-chip {{ c.cls }}" href="{{ c.link }}" target="_blank" rel="noopener">{{ c.id }}</a>
+                  {% endfor %}
+                {% else %}
+                  <span class="no-jira">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <select class="status-select" data-key="{{ row.key_status }}" data-val="{{ row.status_val }}">
+                  <option value=""           {% if not row.status_val             %}selected{% endif %}>—</option>
+                  <option value="Not Started" {% if row.status_val == 'Not Started' %}selected{% endif %}>Not Started</option>
+                  <option value="In Progress" {% if row.status_val == 'In Progress' %}selected{% endif %}>In Progress</option>
+                  <option value="Done"        {% if row.status_val == 'Done'        %}selected{% endif %}>Done</option>
+                </select>
+              </td>
+              <td><div class="pcell" data-key="{{ row.key_notes }}" contenteditable="true" style="min-height:28px;white-space:pre-wrap;font-size:11px">{{ row.notes if row.notes and row.notes|length > 1 else '' }}</div></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    </div><!-- /left-col -->
+
+    <!-- ══ RIGHT: XPUM / Sysman ══ -->
+    <div class="section-card">
+      <div class="section-header purple">
+        <span class="sh-badge" style="background:var(--purple)">⚙ XPUM / SYSMAN</span>
+        <span class="sh-count">{{ xpum_rows|length }}</span>
+        <a href="/cri-e2e/export/xpum"
+           style="margin-left:auto;padding:3px 10px;background:var(--purple);color:#fff;
+                  border-radius:4px;font-size:11px;text-decoration:none;white-space:nowrap;"
+           title="Export XPUM/Sysman to Excel">⬇ Excel</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
               <th>Feature</th>
-              <th style="width:100px">JIRA</th>
-              <th style="width:70px">Status</th>
-              <th style="width:90px">Dependency</th>
-              <th style="width:72px">Blocker ETA</th>
-              <th style="width:52px">ETA</th>
-              <th style="width:110px">Remarks</th>
-              <th style="width:64px">BMG ✏️</th>
-              <th style="width:90px">Comments ✏️</th>
+              <th style="width:130px">JIRA(s)</th>
+              <th style="width:90px">Status ✏️</th>
+              <th style="width:140px">Comments ✏️</th>
             </tr>
           </thead>
           <tbody>
             {% for row in xpum_rows %}
             <tr>
-              <td><span style="font-size:0.72em;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px">{{ row.section }}</span></td>
-              <td class="title-cell" style="max-width:120px">{{ row.feature }}</td>
+              <td class="title-cell">{{ row.feature }}</td>
               <td>
                 {% for chip in row.chips %}
                   <a class="jira-chip {{ chip.cls }}" href="{{ chip.link }}" target="_blank" rel="noopener">{{ chip.id }}</a>
@@ -283,40 +370,13 @@
                 {% endfor %}
               </td>
               <td>
-                {% set sl = row.status.lower() %}
-                {% if 'blocked' in sl %}
-                  <span class="status-badge status-blocked">Blocked</span>
-                {% elif 'progress' in sl or 'wip' in sl %}
-                  <span class="status-badge status-progress">WIP</span>
-                {% elif 'done' in sl or 'complet' in sl %}
-                  <span class="status-badge status-done">Done</span>
-                {% elif 'review' in sl %}
-                  <span class="status-badge status-progress">Review</span>
-                {% elif row.status and row.status.lower() not in ('na','n/a','ready','') %}
-                  <span class="status-badge status-other" title="{{ row.status }}">{{ row.status[:12] }}</span>
-                {% else %}
-                  <span class="no-jira">—</span>
-                {% endif %}
+                <select class="status-select" data-key="{{ row.key_status }}" data-val="{{ row.status_val }}">
+                  <option value=""           {% if not row.status_val             %}selected{% endif %}>—</option>
+                  <option value="Not Started" {% if row.status_val == 'Not Started' %}selected{% endif %}>Not Started</option>
+                  <option value="In Progress" {% if row.status_val == 'In Progress' %}selected{% endif %}>In Progress</option>
+                  <option value="Done"        {% if row.status_val == 'Done'        %}selected{% endif %}>Done</option>
+                </select>
               </td>
-              <td>
-                {% for chip in row.dep_chips %}
-                  <a class="jira-chip {{ chip.cls }}" href="{{ chip.link }}" target="_blank" rel="noopener">{{ chip.id }}</a>
-                {% else %}
-                  {% if row.dep_raw and row.dep_raw.lower() not in ('na','n/a','ready','') %}
-                    <span style="font-size:0.78em;color:#aaa" title="{{ row.dep_raw }}">{{ row.dep_raw[:16] }}{% if row.dep_raw|length > 16 %}…{% endif %}</span>
-                  {% else %}<span class="no-jira">—</span>{% endif %}
-                {% endfor %}
-              </td>
-              <td style="font-size:0.78em;color:{% if row.blocker_eta and row.blocker_eta.lower() not in ('na','n/a','') %}#e07b39{% else %}#666{% endif %}">
-                {{ row.blocker_eta if row.blocker_eta and row.blocker_eta.lower() not in ('na','n/a','') else '—' }}
-              </td>
-              <td style="font-size:0.8em;font-weight:600;color:{% if 'Q1' in row.overall_eta %}#4caf50{% elif 'Q2' in row.overall_eta %}#ff9800{% elif 'Q3' in row.overall_eta or 'Q4' in row.overall_eta %}#f44336{% else %}#888{% endif %}">
-                {{ row.overall_eta if row.overall_eta and row.overall_eta.lower() not in ('na','n/a','') else '—' }}
-              </td>
-              <td class="title-cell" style="font-size:0.78em;color:#aab;max-width:110px" title="{{ row.remarks }}">
-                {{ row.remarks[:60] }}{% if row.remarks|length > 60 %}…{% endif %}
-              </td>
-              <td><div class="pcell" data-key="{{ row.key_bmg }}" contenteditable="true">{{ row.bmg }}</div></td>
               <td><div class="pcell" data-key="{{ row.key_cmt }}" contenteditable="true" style="min-height:28px;white-space:pre-wrap">{{ row.comment }}</div></td>
             </tr>
             {% endfor %}
@@ -328,10 +388,24 @@
   </div><!-- /main-grid -->
 </div><!-- /container -->
 
-<footer>CRI E2E Plan · Intel Confidential · Crescent Island Program</footer>
+<footer>CRI All Features · Intel Confidential · Crescent Island Program</footer>
 
 <script>
   document.getElementById('ts').textContent = new Date().toLocaleString();
+
+  // ── Status select: apply color + auto-save ──
+  function applyStatusColor(sel) { sel.dataset.val = sel.value; }
+  document.querySelectorAll('.status-select').forEach(sel => {
+    applyStatusColor(sel);
+    sel.addEventListener('change', () => {
+      applyStatusColor(sel);
+      fetch('/cri-e2e/save', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({key: sel.dataset.key, value: sel.value})
+      });
+    });
+  });
 
   document.querySelectorAll('.pcell').forEach(cell => {
     cell.addEventListener('blur', () => {

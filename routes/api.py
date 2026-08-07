@@ -8,7 +8,6 @@ Misc API endpoints and static file serving.
 import json
 import sys
 import logging
-import sqlite3 as _sqlite3
 import subprocess
 import threading
 from pathlib import Path
@@ -123,6 +122,8 @@ def save_jira_rules():
 
 
 # ── Excel mtime (used by frontend to detect file changes) ────────────────────
+
+import sqlite3 as _sqlite3
 
 @bp.route('/api/excel-mtime')
 def excel_mtime():

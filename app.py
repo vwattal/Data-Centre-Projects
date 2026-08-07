@@ -42,7 +42,9 @@ from routes.jgs_upstreaming     import bp as jgs_upstream_bp
 from routes.hsd2jira            import bp as hsd2jira_bp
 from routes.jgs_bug_triage      import bp as jgs_bug_triage_bp
 from routes.cri_ccb             import bp as cri_ccb_bp
+from routes.cri_ccb_kmd         import bp as cri_ccb_kmd_bp
 from routes.jgs_emu_bugs       import bp as jgs_emu_bugs_bp
+from routes.jgs_allbugs_sw     import bp as jgs_allbugs_sw_bp
 from routes.jgs_4plus2          import bp as jgs_4plus2_bp
 from routes.cri_daily_tf        import bp as cri_daily_tf_bp
 
@@ -50,8 +52,8 @@ for _bp in (
     index_bp, jgs_soc_bp, api_bp,
     cri_e2e_bp,
     backlog_bp, jgs_upstream_bp,
-    hsd2jira_bp, jgs_bug_triage_bp, cri_ccb_bp,
-    jgs_emu_bugs_bp, jgs_4plus2_bp, cri_daily_tf_bp,
+    hsd2jira_bp, jgs_bug_triage_bp, cri_ccb_bp, cri_ccb_kmd_bp,
+    jgs_emu_bugs_bp, jgs_allbugs_sw_bp, jgs_4plus2_bp, cri_daily_tf_bp,
 ):
     app.register_blueprint(_bp)
 

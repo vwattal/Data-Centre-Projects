@@ -119,6 +119,25 @@
             flex-shrink: 0;
         }
 
+        /* Middle row: EXI full width */
+        .middle-row {
+            flex-shrink: 0;
+        }
+
+        .exi-section {
+            border-top-color: #00897b;
+        }
+
+        .exi-section::after {
+            background: #00897b;
+            right: -50px;
+            top: -50px;
+        }
+
+        .exi-section .project-card {
+            border-left-color: #00897b;
+        }
+
         .divisions {
             display: contents;
         }
@@ -149,7 +168,6 @@
         }
         
         .division:hover {
-            transform: translateY(-3px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
         
@@ -252,8 +270,8 @@
         }
         
         .project-card:hover {
-            transform: translateX(6px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+            border-left-width: 5px;
         }
         
         .project-card h3 {
@@ -284,7 +302,7 @@
         }
         
         .project-card:hover .arrow {
-            transform: translateX(5px);
+            transform: translateX(3px);
         }
         
         .status-badge {
@@ -389,6 +407,94 @@
         .division:nth-child(1) { animation-delay: 0.05s; }
         .division:nth-child(2) { animation-delay: 0.1s; }
         .footer                { animation-delay: 0.15s; }
+
+        /* ── Contacts button ──────────────────────────────────────── */
+        .contacts-btn {
+            position: fixed; bottom: 24px; right: 24px; z-index: 800;
+            background: linear-gradient(135deg, #0071c5, #003c71);
+            color: white; border: none; border-radius: 36px;
+            padding: 14px 24px; font-size: 1rem; font-weight: 700;
+            cursor: pointer; box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+            display: flex; align-items: center; gap: 8px;
+            transition: transform 0.15s, box-shadow 0.15s;
+            letter-spacing: 0.3px;
+        }
+        .contacts-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.45); }
+
+        /* ── Overlay & Drawer ─────────────────────────────────────── */
+        .contacts-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,30,70,0.55);
+            z-index: 900; backdrop-filter: blur(2px);
+        }
+        .contacts-overlay.open { display: block; }
+        .contacts-drawer {
+            position: fixed; top: 0; right: -660px; width: 640px; height: 100vh;
+            background: #fff; z-index: 901; box-shadow: -6px 0 30px rgba(0,0,0,0.25);
+            display: flex; flex-direction: column;
+            transition: right 0.28s cubic-bezier(0.4,0,0.2,1);
+            font-family: 'Intel Clear', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .contacts-drawer.open { right: 0; }
+        .drawer-header {
+            background: linear-gradient(135deg, #003c71 0%, #0055a2 100%);
+            color: white; padding: 16px 22px;
+            display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+        }
+        .drawer-header h2 { font-size: 1.1rem; font-weight: 700; flex: 1; }
+        .drawer-header small { font-size: 0.75rem; color: rgba(255,255,255,0.75); }
+        .drawer-close {
+            background: rgba(255,255,255,0.15); border: none; color: white;
+            width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+            font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+        }
+        .drawer-close:hover { background: rgba(255,255,255,0.3); }
+        .drawer-reset {
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+            color: white; border-radius: 4px; padding: 5px 12px;
+            font-size: 0.78rem; cursor: pointer;
+        }
+        .drawer-reset:hover { background: rgba(255,255,255,0.28); }
+        .drawer-search {
+            margin: 10px 22px 0; flex-shrink: 0;
+        }
+        .drawer-search input {
+            width: 100%; padding: 9px 14px 9px 36px; border-radius: 8px;
+            border: 1.5px solid #d0e4f7; font-size: 0.92rem; outline: none;
+            background: #f4f8ff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230071c5' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 10px center;
+            color: #333;
+        }
+        .drawer-search input:focus { border-color: #0071c5; background-color: #fff; }
+        .ct-row.hidden { display: none; }
+        .drawer-body {
+            flex: 1; overflow-y: auto; padding: 12px 24px 28px;
+        }
+        /* Section header */
+        .ct-section {
+            font-size: 0.82rem; font-weight: 800; color: #0055a2;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            margin: 18px 0 8px; padding-bottom: 5px;
+            border-bottom: 2px solid #d0e4f7;
+        }
+        .ct-section:first-child { margin-top: 4px; }
+        /* Contact row */
+        .ct-row {
+            display: flex; align-items: baseline; gap: 12px;
+            padding: 6px 8px; border-radius: 6px; font-size: 0.92rem;
+        }
+        .ct-row:hover { background: #f0f7ff; }
+        .ct-role { flex: 1; color: #444; line-height: 1.5; }
+        .ct-owner {
+            min-width: 180px; max-width: 240px;
+            color: #003c71; font-weight: 600; font-size: 0.92rem;
+            border-bottom: 1px dashed #aac; padding: 2px 5px;
+            border-radius: 3px; outline: none; cursor: text;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .ct-owner:focus {
+            border-bottom-color: #0071c5; background: #e8f4ff;
+            white-space: normal; overflow: visible;
+        }
+        .ct-owner:empty::before { content: 'TBD'; color: #bbb; font-style: italic; }
     </style>
 </head>
 <body>
@@ -415,6 +521,14 @@
                 </div>
                 
                 <div class="project-links">
+                    <a href="https://intel.sharepoint.com/:x:/r/sites/VTTSWSOSGC/_layouts/15/Doc.aspx?sourcedoc=%7B75082CA4-8107-47AF-861A-6C4017522BA4%7D&file=JGS%20Compute%20and%20KMD%20DCNs%20enabling%20status.xlsx&action=default&mobileredirect=true" class="project-card" target="_blank">
+                        <h3>
+                            📊 GT IP Weekly Updates
+                            <span class="arrow">→</span>
+                        </h3>
+                        <p>Graphics Technology IP weekly status, validation updates, and milestone tracking</p>
+                    </a>
+                    
                     <a href="/jgs-soc-updates" class="project-card" target="_blank">
                         <h3>
                             💻 SOC Driver Updates
@@ -422,6 +536,15 @@
                             <span class="arrow">→</span>
                         </h3>
                         <p>System-on-Chip driver automation, update tracking, and validation status</p>
+                    </a>
+
+                    <a href="/kmd-post-freeze" class="project-card" target="_blank">
+                        <h3>
+                            🗂️ Post Freeze Feature Plan – KMD Core
+                            <span class="status-badge status-active">ACTIVE</span>
+                            <span class="arrow">→</span>
+                        </h3>
+                        <p>JGS post-RTL-freeze KMD feature plan: component-wise Jira tracker with cumulative trend graph</p>
                     </a>
 
                     <a href="/jgs-upstreaming" class="project-card" target="_blank">
@@ -473,15 +596,6 @@
                 </div>
                 
                 <div class="project-links">
-                    <a href="http://10.88.27.190:5050/" class="project-card" target="_blank">
-                        <h3>
-                            📈 Weekly Updates
-                            <span class="status-badge status-active">ACTIVE</span>
-                            <span class="arrow">→</span>
-                        </h3>
-                        <p>Weekly status reports and critical requirements tracking for data centre components</p>
-                    </a>
-                    
                     <a href="http://10.88.27.190:8080/" class="project-card" target="_blank">
                         <h3>
                             🛠️ WA Dashboard
@@ -493,7 +607,7 @@
 
                     <a href="/cri-e2e" class="project-card" target="_blank">
                         <h3>
-                            🧭 E2E Plan
+                            🧭 CRI All Features - Low level driver (kmd+umd+xpum+sysman)
                             <span class="status-badge status-active">ACTIVE</span>
                             <span class="arrow">→</span>
                         </h3>
@@ -509,18 +623,42 @@
                         <p>Strawman HSD tracker — component sign-off status (XeKMD, Sysman, XPUM, E2E) from server_platf.feature AR child records</p>
                     </a>
 
-                    <a href="/cri-daily-tf" class="project-card" target="_blank">
+                    <a href="/cri-ccb-kmd" class="project-card" target="_blank">
                         <h3>
-                            📋 CRI Daily TF
+                            🔑 CRI CCB KMD Status
                             <span class="status-badge status-active">ACTIVE</span>
                             <span class="arrow">→</span>
                         </h3>
-                        <p>Live TF meeting minutes for XPUM/Sysman &amp; XeKMD pending features — latest WW status and inferred blockers from SharePoint Excel</p>
+                        <p>KMD-only strawman HSD view — XeKMD sign-off status, impact outside core KMD, scoping ETA, effort estimate and Jira link per HSD</p>
                     </a>
                 </div>
             </div>
         </div>
         
+        <!-- Middle row: EXI full width -->
+        <div class="middle-row">
+            <div class="division compact exi-section">
+                <div class="division-header">
+                    <div class="division-icon">⚡</div>
+                    <div>
+                        <div class="division-title">EXI Projects</div>
+                        <div class="division-subtitle">xe5 Platform</div>
+                    </div>
+                </div>
+
+                <div class="project-links">
+                    <a href="http://10.88.27.190:8889/xe5-dcn-status" class="project-card" target="_blank" style="border-left-color: #00897b;">
+                        <h3>
+                            📊 GT SW E2E plan for EXI
+                            <span class="status-badge status-active">ACTIVE</span>
+                            <span class="arrow">→</span>
+                        </h3>
+                        <p>xe5 DCN enabling status — HSD readiness (sim/emu), per-component dev readiness (Compute, IGC, XeKMD, PISA, GUC), implementation trends and test dev tracking</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- Bottom row: General Tracking full width -->
         <div class="bottom-row">
             <div class="division compact" style="border-top-color: #6a1b9a;">
@@ -579,5 +717,137 @@
             </div>
         </div>
     </div>
+
+    <!-- Contacts floating button -->
+    <button class="contacts-btn" onclick="openContacts()">👥 Important Contacts</button>
+
+    <!-- Overlay -->
+    <div class="contacts-overlay" id="ctOverlay" onclick="closeContacts()"></div>
+
+    <!-- Drawer -->
+    <div class="contacts-drawer" id="ctDrawer">
+        <div class="drawer-header">
+            <h2>👥 Important Contacts</h2>
+            <small>Click any name to edit</small>
+            <button class="drawer-reset" onclick="resetContacts()">↺ Reset</button>
+            <button class="drawer-close" onclick="closeContacts()">✕</button>
+        </div>
+        <div class="drawer-search">
+            <input type="text" id="ctSearch" placeholder="Search role or name…" oninput="filterContacts(this.value)">
+        </div>
+        <div class="drawer-body" id="ctBody"></div>
+    </div>
+
+    <script>
+    const CT_KEY = 'dc_contacts_v1';
+
+    // Default contacts: [section, role, owner]
+    const CT_DEFAULT = [
+        ['', 'CoreMM — Backport',           'Ayaz Sidiqque'],
+        ['', 'CoreMM — UAL',                'Alex Zhou'],
+        ['', 'RAS / Telemetry',             'Anshuman Gupta'],
+        ['', 'System controller driver',    'Mansoor (Kam)'],
+        ['', 'PMT',                         'Mike Ruhl'],
+        ['', 'I2C',                         'Heikki'],
+        ['', 'MEI',                         'Sasha'],
+        ['', 'Pre-Si val / BKC at KMD',     'Haridhar'],
+        ['', 'Post-Si val / BKC at KMD',    'Rama'],
+        ['', 'IGT expert',                  'Dwarakanath Ramadeva'],
+        ['', 'PO czars',                    'Bala / Matt Ropper'],
+        ['', 'All experts',                 'Fei Yang / Stuart Summers'],
+        ['', 'SR-IOV',                      'Artem Fedko'],
+        ['', 'KMD CI',                      'Ewelina'],
+        ['', 'UMD CI',                      'Lukasz Dyrga'],
+        ['', 'Prochain tool',               'Galina'],
+        ['', 'KMD PM',                      'Srinivasa Adatrao'],
+        ['', 'GuC FW',                      'Nicole / Lukasz Lademan'],
+        ['', 'UMD Dev — all',               'Bartosz / Filip'],
+        ['', 'UMD Validation',              'Lukasz Dyrga'],
+        ['', 'BKC low-level driver',        'Lukasz Dyrga'],
+        ['', 'Sysman / XPum',               'SaiKishore (Ravi Ganapathi)'],
+        ['', 'VMware',                      'Jon Ewins'],
+        ['', 'IGC',                         'Aleksey / Pavel'],
+        ['', 'E2E testing',                 'Luis Stranos'],
+        ['', 'DEM',                         'Pradeep Kaushik'],
+        ['', 'Emulation models',            'Praveen Samala / Anitha Balakumari'],
+        ['', 'XeSim — all',                 'Shuo Feng'],
+        ['', 'PPA',                         'Amarpreet'],
+        ['', 'GCA',                         'Sohaib'],
+        ['', 'SOC PXT / PSXT',              ''],
+        ['', 'SOC FW',                      'Ramesh Giri'],
+        ['', 'AI Frameworks — Earlier PM',  'Bernal Castro / Rodrigo'],
+        ['', 'AI Frameworks — Execution',   'Ankur Neog'],
+        ['', 'AI Frameworks — PM',          'Prital Shah'],
+        ['', 'AI Frameworks — Everything',  'Fan Zhao'],
+    ];
+
+    let ctEdits = {};
+    try { ctEdits = JSON.parse(localStorage.getItem(CT_KEY) || '{}'); } catch(_) {}
+
+    function ownerKey(section, role) { return section + '|' + role; }
+
+    function getOwner(section, role, def) {
+        const k = ownerKey(section, role);
+        return ctEdits.hasOwnProperty(k) ? ctEdits[k] : def;
+    }
+
+    function saveOwner(section, role, val) {
+        ctEdits[ownerKey(section, role)] = val;
+        try { localStorage.setItem(CT_KEY, JSON.stringify(ctEdits)); } catch(_) {}
+    }
+
+    function renderContacts() {
+        const body = document.getElementById('ctBody');
+        let html = '';
+        CT_DEFAULT.forEach(([section, role, def]) => {
+            const owner = getOwner(section, role, def);
+            const k = ownerKey(section, role).replace(/'/g, '&#39;');
+            html += `<div class="ct-row">
+                <span class="ct-role">${role}</span>
+                <span class="ct-owner" contenteditable="true" spellcheck="false"
+                    data-key="${k}"
+                    onblur="handleOwnerBlur(this)"
+                    onkeydown="if(event.key==='Enter'){this.blur();event.preventDefault();}"
+                >${owner}</span>
+            </div>`;
+        });
+        body.innerHTML = html;
+    }
+
+    function handleOwnerBlur(el) {
+        const [section, role] = el.dataset.key.split('|');
+        saveOwner(section, role, el.innerText.trim());
+    }
+
+    function openContacts() {
+        renderContacts();
+        document.getElementById('ctSearch').value = '';
+        filterContacts('');
+        document.getElementById('ctOverlay').classList.add('open');
+        document.getElementById('ctDrawer').classList.add('open');
+        setTimeout(() => document.getElementById('ctSearch').focus(), 300);
+    }
+
+    function closeContacts() {
+        document.getElementById('ctOverlay').classList.remove('open');
+        document.getElementById('ctDrawer').classList.remove('open');
+    }
+
+    function resetContacts() {
+        if (!confirm('Reset all contact names to defaults?')) return;
+        ctEdits = {};
+        try { localStorage.removeItem(CT_KEY); } catch(_) {}
+        renderContacts();
+        filterContacts(document.getElementById('ctSearch').value);
+    }
+
+    function filterContacts(q) {
+        q = q.toLowerCase().trim();
+        document.querySelectorAll('.ct-row').forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.classList.toggle('hidden', !!q && !text.includes(q));
+        });
+    }
+    </script>
 </body>
 </html>
