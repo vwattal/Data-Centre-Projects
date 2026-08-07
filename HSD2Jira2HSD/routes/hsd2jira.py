@@ -307,7 +307,7 @@ def _fetch_hsd_info(session: requests.Session, hsd_id: str) -> dict:
                     'emu_rdy':          _rdy(r, 'rtl_actual_rdy_for_drv_ww'),
                     'rtl_trend_rdy':    _rdy(r, 'rtl_trend_rdy_for_drv_ww'),
                     'turnin_trend_ww':  _rdy(r, 'turnin_trend_ww'),
-                    'study_priority':   str(r.get('study_priority') or r.get('ip_hw_graphics.dcn.study_priority') or '').strip(),
+                    'study_priority':   str(r.get('ip_hw_graphics.feature.study_priority') or r.get('study_priority') or '').strip(),
                 }
     except Exception as exc:
         logger.error('HSD info fetch failed for %s: %s', hsd_id, exc)
